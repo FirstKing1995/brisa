@@ -5,8 +5,8 @@ import { POSES, mistura, pincaLocal, posLocalParaMundo, montar, maoFundo, maoFre
 import { flor, geraFarelo, desenhaFarelo, tesoura, seda, tubo, baseado, isqueiro, lingua, corpo, Fumaca, desenhaChama, quadros, desenhaQuadro } from './objetos.js';
 
 // Cenas desenhadas quadro a quadro (geradas no ChatGPT). Enquanto não carregam, vale a mão de código.
-const Q_PEGAR = quadros('pegar-flor', 8);
-const Q_BOLAR = quadros('bolar', 8);
+const Q_PEGAR = quadros('pegar-flor', 25);
+const Q_BOLAR = quadros('bolar', 25);
 
 function comAlfa(a, fn) {
   if (a <= 0) return;
@@ -228,8 +228,8 @@ export const PASSOS = [
     draw(u) {
       const alfa = faixa(u, -1, -.2);
       if (Q_PEGAR.pronto) {
-        // quadro 0: só a flor; 1 a 7: a mão entra, pega e ergue
-        const f = u < 0 ? 0 : 1 + u * 6.999;
+        // quadro 0: só a flor; do 4 ao 24: a mão entra, pega e ergue
+        const f = u < 0 ? 0 : 4 + clamp(u) * 20;
         desenhaQuadro(Q_PEGAR, f, 0, -190, 1.35, alfa);
         return;
       }
@@ -403,13 +403,13 @@ export const PASSOS = [
   },
   // 5 ------------------------------------------------------------
   {
-    v: 'bolar', modo: 'segure', dur: 5.5, pre: 1.4, cam: 60, loop: 'enrola',
+    v: 'bolar', modo: 'segure', dur: 4.2, pre: 1.4, cam: 60, loop: 'enrola',
     // A cena desenhada entra por dissolvência sobre o fim da etapa anterior.
     draw(u) {
       if (!Q_BOLAR.pronto) return this.codigo(u);
       const k = suave(faixa(u, -1, -.25));
       comAlfa(1 - k, () => this.codigo(u));
-      const f = u < 0 ? 0 : clamp(u) * 7.999;
+      const f = u < 0 ? 0 : clamp(u) * 24;
       desenhaQuadro(Q_BOLAR, f, 0, TUBO_Y + 40, 1.45, k);
     },
     codigo(u) {
@@ -457,7 +457,7 @@ export const PASSOS = [
       // o último quadro desenhado se dissolve enquanto a cabeça sobe
       const k = suave(faixa(u, -1, -.45));
       comAlfa(k, () => this.codigo(u));
-      desenhaQuadro(Q_BOLAR, 7, 0, TUBO_Y + 40, 1.45, 1 - k);
+      desenhaQuadro(Q_BOLAR, 24, 0, TUBO_Y + 40, 1.45, 1 - k);
     },
     codigo(u) {
       const W = C.M.sedaW, xm = W / 2 - 28, baixo = SEDA_Y + SEDA_H / 2;

@@ -29,12 +29,13 @@ export function quadros(nome, n) {
   return cacheQ[nome];
 }
 
-// f contínuo: cada quadro fica parado e só no fim passa rápido para o próximo, como desenho animado.
+// f contínuo: mistura o quadro atual com o próximo para o movimento correr sem travadas.
 export function desenhaQuadro(q, f, x, y, s = 1, alpha = 1) {
   if (!q.pronto || alpha <= 0) return;
   const c = G.ctx, w = q.img.width / q.n, h = q.img.height;
-  const k = Math.max(0, Math.min(q.n - 1, Math.floor(f)));
-  const t = suave(faixa(f - k, .72, 1));
+  f = Math.max(0, Math.min(q.n - 1, f));
+  const k = Math.min(q.n - 1, Math.floor(f));
+  const t = f - k;
   c.save();
   c.globalCompositeOperation = 'lighter';
   const um = (i, a) => {
