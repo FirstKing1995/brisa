@@ -271,7 +271,7 @@ function geraCabelo(tipo) {
     for (let i = 0; i < n; i++) {
       const a = i / n * 6.283 + R() * (dread ? .2 : .08), b = borda(a);
       const ini = dread ? .18 + R() * .34 : .08 + R() * .2, fim = dread ? .86 + R() * .14 : .75 + R() * .24;
-      const fase = R() * 6.283, curva = dread ? 5 + R() * 4 : 0;
+      const fase = R() * 6.283, curva = dread ? 3 + R() * 3 : 0;
       const pts = [];
       for (let k = 0; k <= 7; k++) {
         const q = lerp(ini, fim, k / 7), gi = (dread ? .34 : .55) * (1 - q);
@@ -280,7 +280,7 @@ function geraCabelo(tipo) {
         const x = cx * (1 - q) + b[0] * q + ond, y = cy * (1 - q) + b[1] * q - ond * .6;
         pts.push([x * co - y * si, x * si + y * co]);
       }
-      l.push({ pts, w: dread ? 3 : 1.5, a: dread ? .95 : .8 });
+      l.push({ pts: arredonda(pts, 2), w: dread ? 3.4 : 1.5, a: dread ? .95 : .8 });
     }
   }
   cacheCabelo.set(tipo, l);

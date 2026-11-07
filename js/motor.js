@@ -1,5 +1,5 @@
 // Utilidades e o traço: tudo no jogo passa por linha(), que dá o tremor de desenho à mão.
-export const G = { ctx: null, t: 0, boil: 0, amp: 1, derrete: 0, cor: '#f4f4f0', fundo: '#000', larg: 3.2 };
+export const G = { ctx: null, t: 0, boil: 0, amp: 1, derrete: 0, cor: '#f4f4f0', fundo: '#000', larg: 2.6 };
 
 export const lerp = (a, b, k) => a + (b - a) * k;
 export const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));

@@ -67,7 +67,7 @@ function comecaChapado() {
 function terminaChapado() {
   faseChapada(false);
   J.modo = 'jogo';
-  G.cor = '#f4f4f0'; G.fundo = '#000'; G.amp = 1; G.derrete = 0; G.larg = 3.2;
+  G.cor = '#f4f4f0'; G.fundo = '#000'; G.amp = 1; G.derrete = 0; G.larg = 2.6;
   C.fumaSopro.fitas = []; C.fumaBrasa.fitas = [];
   novaSessao(J.sessao);
   J.cam = -115;

@@ -2,47 +2,55 @@
 // Dedo = [ângulo da base, dobra 1, dobra 2], em graus. Negativo dobra para o lado do polegar.
 import { G, linha, arredonda, lerp, rad } from './motor.js';
 
+// Proporções tiradas de referencias/maos-ref-1.png: palma estreita, dedos longos e afilados.
 const DEDOS = {
-  i: { b: [-42, -112], l: [42, 28, 22], w: [13, 11.5, 10, 8.5] },
-  m: { b: [-14, -120], l: [46, 31, 23], w: [13.5, 12, 10.5, 9] },
-  r: { b: [14, -116], l: [42, 29, 22], w: [13, 11.5, 10, 8.5] },
-  p: { b: [40, -102], l: [32, 22, 18], w: [11.5, 10, 9, 7.5] },
-  t: { b: [-58, -55], l: [44, 34, 26], w: [17, 15, 13, 10.5] },
+  i: { b: [-34, -110], l: [50, 34, 28], w: [12, 10.4, 9, 7] },
+  m: { b: [-11, -120], l: [55, 38, 30], w: [12.5, 11, 9.2, 7.4] },
+  r: { b: [12, -116], l: [50, 35, 28], w: [12, 10.4, 9, 7] },
+  p: { b: [34, -102], l: [38, 27, 22], w: [10.4, 9, 7.8, 6.2] },
+  t: { b: [-46, -58], l: [50, 40, 32], w: [14, 12, 10, 7.5] },
 };
 const NOMES = ['t', 'i', 'm', 'r', 'p'];
 const ORDEM = ['p', 'r', 'm', 'i', 't'];
 
 const PALMA = [
-  [-38, 0], [-52, -22], [-63, -48], [-62, -80], [-56, -108], [-30, -124], [0, -130],
-  [28, -126], [52, -104], [57, -70], [50, -34], [38, 0],
+  [-27, 0], [-44, -24], [-52, -55], [-50, -85], [-44, -108], [-26, -121], [0, -125],
+  [26, -119], [44, -103], [48, -70], [41, -34], [27, 0],
 ];
 
+// tr: dedos que ficam atrás da palma. un: dedos com unha aparente. gw, gl: largura e comprimento dos dedos.
+const RECOLHIDOS = { m: [-52, -72, -60], r: [-48, -76, -62], p: [-44, -74, -60], tr: 'mrp', un: 'ti' };
+// Punho da pose 5 da referência: dedos dobrados para o lado, empilhados na beira da palma.
+const BASES_PUNHO = { i: [-36, -118], m: [-38, -92], r: [-36, -68], p: [-30, -46] };
+const FECHADOS = { i: [-92, -6, -16], m: [-94, -6, -16], r: [-92, -6, -16], p: [-88, -6, -16] };
 export const POSES = {
-  relax: { t: [-52, 12, 10], i: [-8, -14, -10], m: [0, -14, -12], r: [8, -14, -12], p: [18, -14, -10], fr: 't' },
-  aberta: { t: [-68, 8, 6], i: [-14, -4, -3], m: [-3, -3, -2], r: [8, -3, -3], p: [22, -3, -3], fr: 't' },
-  pinca: { t: [-40, 15, 7], i: [-30, -50, -45], m: [-14, -48, -42], r: [0, -50, -42], p: [14, -46, -38], fr: 't' },
-  pincaAb: { t: [-60, 8, 5], i: [-18, -30, -26], m: [-8, -36, -32], r: [3, -38, -34], p: [15, -36, -30], fr: 't' },
-  esfrega: { t: [-44, 20, 10], i: [-26, -46, -50], m: [-14, -48, -42], r: [0, -50, -42], p: [14, -46, -38], fr: 't' },
-  tesA: { t: [-66, 2, 4], i: [-12, -26, -22], m: [-10, -48, -44], r: [2, -52, -46], p: [14, -50, -42], fr: 'ti' },
-  tesF: { t: [-50, 10, 8], i: [-24, -38, -32], m: [-10, -48, -44], r: [2, -52, -46], p: [14, -50, -42], fr: 'ti' },
-  punho: { t: [-14, 8, 6], i: [-3, -9, -30], m: [0, -9, -30], r: [3, -9, -30], p: [7, -9, -30], fr: 'imrpt' },
-  punhoFlick: { t: [-3, -4, -12], i: [-3, -9, -30], m: [0, -9, -30], r: [3, -9, -30], p: [7, -9, -30], fr: 'imrpt' },
+  relax: { t: [-52, 12, 10], i: [-10, -14, -10], m: [-2, -14, -12], r: [8, -14, -12], p: [18, -14, -10], fr: 't' },
+  aberta: { t: [-64, 8, 6], i: [-16, -4, -3], m: [-4, -3, -2], r: [8, -3, -3], p: [22, -3, -3], fr: 't' },
+  pinca: { t: [-52, 14, 8], i: [-35, -45, -40], ...RECOLHIDOS, fr: 't' },
+  pincaAb: { t: [-64, 8, 6], i: [-20, -28, -22], ...RECOLHIDOS, fr: 't' },
+  esfrega: { t: [-48, 18, 10], i: [-33, -42, -46], ...RECOLHIDOS, fr: 't' },
+  tesA: { t: [-68, 2, 4], i: [-12, -24, -20], ...RECOLHIDOS, fr: 'ti' },
+  tesF: { t: [-54, 12, 8], i: [-26, -36, -30], ...RECOLHIDOS, fr: 'ti' },
+  punho: { t: [2, -6, -8], ...FECHADOS, fr: 'imrpt', un: 't', gw: 1.45, gl: .6, bs: BASES_PUNHO },
+  punhoFlick: { t: [-8, -16, -14], ...FECHADOS, fr: 'imrpt', un: 't', gw: 1.45, gl: .6, bs: BASES_PUNHO },
 };
 
 export function mistura(a, b, k) {
-  const r = { fr: k > .5 ? b.fr : a.fr };
+  const fonte = k > .5 ? b : a;
+  const r = { fr: fonte.fr, tr: fonte.tr, un: fonte.un, bs: fonte.bs, gw: lerp(a.gw ?? 1, b.gw ?? 1, k), gl: lerp(a.gl ?? 1, b.gl ?? 1, k) };
   for (const n of NOMES) r[n] = [lerp(a[n][0], b[n][0], k), lerp(a[n][1], b[n][1], k), lerp(a[n][2], b[n][2], k)];
   return r;
 }
 
 function juntas(pose, n) {
   const d = DEDOS[n], g = pose[n];
-  let [x, y] = d.b, a = 0;
+  let [x, y] = pose.bs?.[n] || d.b, a = 0;
   const out = [[x, y]];
   for (let i = 0; i < 3; i++) {
     a += g[i];
-    x += Math.sin(rad(a)) * d.l[i];
-    y -= Math.cos(rad(a)) * d.l[i];
+    const L = d.l[i] * (n === 't' ? 1 : pose.gl ?? 1);
+    x += Math.sin(rad(a)) * L;
+    y -= Math.cos(rad(a)) * L;
     out.push([x, y]);
   }
   return out;
@@ -102,9 +110,9 @@ export function montar(h0) {
   const al = Math.hypot(ax, ay) || 1; ax /= al; ay /= al;
   const lado = (p, d, fat) => [mx + ax * d + (p[0] - mx) * fat, my + ay * d + (p[1] - my) * fat];
   const palma = arredonda([
-    lado(wl, al + (h.extra ?? 300), 1.5), lado(wl, 90, 1.12),
+    lado(wl, al + (h.extra ?? 300), 1.3), lado(wl, 90, 1.06),
     ...PALMA.map(p => W(p[0], p[1])),
-    lado(wr, 90, 1.12), lado(wr, al + (h.extra ?? 300), 1.5),
+    lado(wr, 90, 1.06), lado(wr, al + (h.extra ?? 300), 1.3),
   ], 2);
 
   const dedos = {};
@@ -120,18 +128,20 @@ export function montar(h0) {
     const larg = ac.map(v => {
       const k = v / tot * 4;
       const i = Math.min(3, Math.floor(k));
-      return i === 0 ? d.w[0] : lerp(d.w[i - 1], d.w[Math.min(3, i)], k - i);
+      const base = i === 0 ? d.w[0] : lerp(d.w[i - 1], d.w[Math.min(3, i)], k - i);
+      return n === 't' ? base : base * (h.pose.gw ?? 1);
     });
     const loc = contornoDedo(sub, larg);
     const a = j[2], b = j[3];
     const tx = b[0] - a[0], ty = b[1] - a[1], tl = Math.hypot(tx, ty) || 1;
     const dx = tx / tl, dy = ty / tl, nx = -dy, ny = dx;
-    const wn = d.w[3];
+    const wn = d.w[3] * (n === 't' ? 1 : h.pose.gw ?? 1);
     const unha = [];
     for (let k = 0; k < 12; k++) {
       const an = k / 12 * Math.PI * 2;
-      const u = Math.cos(an) * wn * .95, v = Math.sin(an) * wn * .62;
-      unha.push(W(b[0] - dx * 1.5 + dx * u + nx * v, b[1] - dy * 1.5 + dy * u + ny * v));
+      const cu = Math.cos(an);
+      const u = cu * wn * 1.35, v = Math.sin(an) * wn * .8 * (1 - .22 * Math.max(0, cu));
+      unha.push(W(b[0] + dx * (wn * .1 + u) + nx * v, b[1] + dy * (wn * .1 + u) + ny * v));
     }
     const dobras = [1, 2].map(ij => {
       const p = j[ij], q = j[ij + 1], r = j[ij - 1];
@@ -139,7 +149,7 @@ export function montar(h0) {
       const ww = d.w[ij] * .55, px = -vy, py = vx;
       return [W(p[0] + px * ww, p[1] + py * ww), W(p[0] + vx * 2, p[1] + vy * 2), W(p[0] - px * ww, p[1] - py * ww)];
     });
-    dedos[n] = { pts: loc.map(p => W(p[0], p[1])), unha, dobras, ponta: W(b[0], b[1]) };
+    dedos[n] = { pts: loc.map(p => W(p[0], p[1])), unha, dobras, ponta: W(b[0], b[1]), temUnha: !h.pose.un || h.pose.un.includes(n) };
   }
   const t = dedos.t.ponta, i = dedos.i.ponta;
   return { h, W, palma, dedos, pinca: [(t[0] + i[0]) / 2, (t[1] + i[1]) / 2], pulso: [mx, my], dirBraco: [ax, ay] };
@@ -147,32 +157,33 @@ export function montar(h0) {
 
 function desenhaDedo(d) {
   linha(d.pts, { f: true });
-  for (const dd of d.dobras) linha(dd, { w: G.larg * .55, a: .7 });
-  if (G.unha === 'cheia') linha(d.unha, { f: G.cor, fechar: true, w: 1 });
-  else if (G.unha === 'vazia') linha(d.unha, { fechar: true, w: G.larg * .6, a: .85 });
+  // só a dobra do meio, bem discreta, como na referência
+  linha(d.dobras[0], { w: G.larg * .45, a: .55 });
+  if (d.temUnha) {
+    if (G.unha === 'cheia') linha(d.unha, { f: G.cor, fechar: true, w: 1 });
+    else if (G.unha === 'vazia') linha(d.unha, { fechar: true, w: G.larg * .6, a: .85 });
+  }
 }
 
 // Palma e dedos de trás. O objeto segurado é desenhado entre maoFundo e maoFrente.
 export function maoFundo(m) {
-  const fr = m.h.pose.fr || 't';
-  for (const n of ORDEM) if (n === 'p' || n === 'r') if (!fr.includes(n)) desenhaDedo(m.dedos[n]);
+  const fr = m.h.pose.fr || 't', tr = m.h.pose.tr || '';
+  for (const n of ORDEM) if (tr.includes(n) && !fr.includes(n)) desenhaDedo(m.dedos[n]);
   linha(m.palma, { f: true });
   const W = m.W;
-  linha(arredonda([W(-34, -30), W(-18, -60), W(-14, -96)], 2), { w: G.larg * .55, a: .55 });
-  linha(arredonda([W(24, -92), W(14, -74), W(20, -52)], 2), { w: G.larg * .55, a: .4 });
+  linha(arredonda([W(-28, -30), W(-14, -58), W(-12, -90)], 2), { w: G.larg * .45, a: .5 });
   if (m.h.pulseira) {
-    linha(arredonda([W(-40, 18), W(0, 26), W(40, 18)], 2), { w: G.larg * .75 });
-    linha(arredonda([W(-40, 28), W(0, 36), W(40, 28)], 2), { w: G.larg * .75 });
+    linha(arredonda([W(-29, 16), W(0, 23), W(29, 16)], 2), { w: G.larg * .75 });
+    linha(arredonda([W(-29, 25), W(0, 32), W(29, 25)], 2), { w: G.larg * .75 });
   }
   if (m.h.tatuagem) {
-    const c = W(14, -62);
+    const c = W(10, -62);
     for (let k = 0; k < 5; k++) {
       const a = k / 5 * Math.PI * 2 + rad(m.h.r);
-      linha([c, [c[0] + Math.cos(a) * 12, c[1] + Math.sin(a) * 12]], { w: G.larg * .55 });
+      linha([c, [c[0] + Math.cos(a) * 10, c[1] + Math.sin(a) * 10]], { w: G.larg * .55 });
     }
   }
-  for (const n of ORDEM) if (n === 'm' || n === 'i') if (!fr.includes(n)) desenhaDedo(m.dedos[n]);
-  if (!fr.includes('t')) desenhaDedo(m.dedos.t);
+  for (const n of ORDEM) if (!tr.includes(n) && !fr.includes(n)) desenhaDedo(m.dedos[n]);
 }
 
 export function maoFrente(m) {
