@@ -242,10 +242,10 @@ export function desenhaChama(p, r, k = 1) {
 
 // ---------- Língua: pino na ponta, cresce para baixo ----------
 export function lingua(x, y, r = 0, e = 1) {
-  const perfil = [[0, -7], [18, -5], [36, 8], [50, 34], [58, 76], [63, 130], [68, 240], [72, 500], [76, 1000]];
+  const perfil = [[0, -7], [18, -5], [36, 8], [50, 34], [58, 76], [63, 130], [66, 200], [68, 290]];
   const pts = [...perfil.slice(1).reverse().map(p => [-p[0], p[1]]), ...perfil];
   linha(tf(arredonda(pts, 2), x, y, r, e), { f: true });
-  linha(tf(arredonda([[-1, 20], [3, 70], [-2, 150], [2, 300], [0, 1000]], 2), x, y, r, e), { w: 1.8, a: .75 });
+  linha(tf(arredonda([[-1, 20], [3, 70], [-2, 150], [1, 285]], 2), x, y, r, e), { w: 1.8, a: .75 });
   for (const [px, py, l] of [[-24, 40, 8], [24, 54, 9], [-34, 92, 10], [30, 110, 8], [-18, 134, 9], [40, 162, 10]]) {
     linha(tf(arredonda([[px, py], [px + 2, py + l * .5], [px, py + l]], 1), x, y, r, e), { w: 1.2, a: .45 });
   }

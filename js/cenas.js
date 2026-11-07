@@ -445,7 +445,8 @@ export const PASSOS = [
       }
       const sai = suave(faixa(u, -.3, 0));
       const treme = C.segura * Math.sin(G.t * 8) * 2.5;
-      lingua(treme * .6, lerp(285, LINGUA_Y, sai) + treme, rad(Math.sin(G.t * 1.3) * 2), .52);
+      // só sai depois que a cabeça já chegou; o resto da língua fica escondido embaixo dela
+      if (sai > 0) lingua(treme * .6, lerp(285, LINGUA_Y, sai) + treme, rad(Math.sin(G.t * 1.3) * 2), .52);
       corpo(lerp(1000, 0, k), C.M.cabelo);
       maoFrente(R); maoFrente(L);
     },
