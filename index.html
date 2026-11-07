@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>Brisa</title>
+<meta name="description" content="Um ritual calmo em linhas brancas. Jogo de ficção para maiores de 18 anos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<canvas id="tela" aria-label="Duas mãos desenhadas em linhas brancas sobre fundo preto"></canvas>
+
+<section id="inicio">
+  <h1>brisa</h1>
+  <p class="sub">bole, acenda, respire. de novo.</p>
+  <button id="comecar" type="button">começar</button>
+  <p class="aviso">Jogo de ficção para maiores de 18 anos. Use fones.</p>
+</section>
+
+<div id="comando" aria-live="polite">
+  <svg id="anel" viewBox="0 0 44 44" aria-hidden="true">
+    <circle class="trilho" cx="22" cy="22" r="18"/>
+    <circle class="cheio" cx="22" cy="22" r="18" pathLength="100"/>
+  </svg>
+  <div id="verbo"></div>
+  <div id="dica"></div>
+</div>
+
+<div id="painel">
+  <span id="contagem"></span>
+  <span id="faixa"></span>
+  <button id="btnFaixa" type="button" aria-label="Próxima música" title="Próxima música">
+    <svg viewBox="0 0 24 24"><path d="M5 6l9 6-9 6zM18 6v12"/></svg>
+  </button>
+  <button id="btnAuto" type="button" aria-label="Deixar o jogo acontecer sozinho" aria-pressed="false" title="Deixar acontecer sozinho">
+    <svg viewBox="0 0 24 24"><path d="M3 12c3-6 6-6 9 0s6 6 9 0"/></svg>
+  </button>
+  <button id="btnSom" type="button" aria-label="Desligar o som" aria-pressed="true" title="Som">
+    <svg viewBox="0 0 24 24"><path d="M4 10v4h3l5 4V6L7 10H4z"/><path class="onda" d="M16 9c1.5 1.8 1.5 4.2 0 6M18.5 6.5c3 3.3 3 7.7 0 11"/></svg>
+  </button>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

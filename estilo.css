@@ -1,0 +1,62 @@
+:root{ --tinta:#f4f4f0; --apagado:rgba(244,244,240,.55); }
+*{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html,body{ height:100%; background:#000; overflow:hidden; overscroll-behavior:none; }
+body{
+  color:var(--tinta);
+  font-family:'Caveat','Segoe Print','Bradley Hand',cursive;
+  user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+  touch-action:none;
+}
+#tela{ position:fixed; inset:0; width:100%; height:100%; display:block; cursor:pointer; }
+
+/* Abertura */
+#inicio{
+  position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+  padding:0 24px calc(11vh + env(safe-area-inset-bottom)); text-align:center;
+  transition:opacity 1.2s ease; z-index:3; pointer-events:none;
+}
+#inicio.saiu{ opacity:0; visibility:hidden; transition:opacity 1.2s ease, visibility 0s 1.2s; }
+#inicio h1{ font-size:clamp(64px,15vmin,112px); font-weight:400; line-height:1; letter-spacing:.02em; }
+#inicio .sub{ font-size:clamp(22px,4.6vmin,30px); color:var(--apagado); margin:6px 0 30px; }
+#comecar{
+  pointer-events:auto; font:inherit; font-size:30px; color:var(--tinta); background:transparent;
+  border:1.5px solid var(--tinta); border-radius:999px 880px 999px 840px; padding:8px 44px 10px; cursor:pointer;
+  transition:background .3s, color .3s;
+}
+#comecar:hover,#comecar:focus-visible{ background:var(--tinta); color:#000; outline:none; }
+#inicio .aviso{ font-size:18px; color:var(--apagado); margin-top:22px; }
+
+/* Comando da vez */
+#comando{
+  position:fixed; left:50%; bottom:calc(5.5vh + env(safe-area-inset-bottom)); transform:translateX(-50%);
+  width:min(92vw,520px); text-align:center; pointer-events:none; z-index:2;
+  opacity:0; transition:opacity .55s ease;
+}
+#comando.ativo{ opacity:1; }
+#verbo{ font-size:clamp(34px,7vmin,46px); line-height:1.1; text-shadow:0 0 12px #000,0 0 4px #000; }
+#dica{ font-size:clamp(19px,3.8vmin,23px); color:var(--apagado); min-height:1.2em; text-shadow:0 0 8px #000; }
+#anel{ width:38px; height:38px; display:block; margin:0 auto 4px; transform:rotate(-90deg); fill:none; stroke:var(--tinta); stroke-width:1.6; opacity:0; transition:opacity .3s; }
+#comando.segurar #anel{ opacity:1; }
+#anel .trilho{ opacity:.22; }
+#anel .cheio{ stroke-dasharray:0 100; stroke-linecap:round; }
+
+/* Cantinho */
+#painel{
+  position:fixed; top:calc(12px + env(safe-area-inset-top)); right:12px; left:14px;
+  display:flex; align-items:center; gap:6px; z-index:4;
+}
+#contagem{ margin-right:auto; font-size:21px; color:var(--apagado); }
+#faixa{ font-size:20px; color:var(--apagado); max-width:42vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:0; transition:opacity 1s; }
+#faixa.visivel{ opacity:1; }
+#painel button{
+  width:44px; height:44px; background:transparent; border:0; cursor:pointer; display:grid; place-items:center;
+  opacity:.5; transition:opacity .25s; border-radius:50%;
+}
+#painel button:hover,#painel button:focus-visible{ opacity:1; outline:none; }
+#painel button[aria-pressed="true"]{ opacity:.95; }
+#painel svg{ width:24px; height:24px; fill:none; stroke:var(--tinta); stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+#btnSom[aria-pressed="false"] .onda{ display:none; }
+
+@media (prefers-reduced-motion:reduce){
+  #inicio,#comando{ transition:none; }
+}
