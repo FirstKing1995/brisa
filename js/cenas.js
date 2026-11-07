@@ -2,7 +2,19 @@
 // de 0 a 1 é a ação comandada pelo jogador.
 import { G, lerp, clamp, suave, faixa, rad, rng, arco, linha } from './motor.js';
 import { POSES, mistura, pincaLocal, posLocalParaMundo, montar, maoFundo, maoFrente, mao } from './mao.js';
-import { flor, geraFarelo, desenhaFarelo, tesoura, seda, tubo, baseado, isqueiro, lingua, corpo, Fumaca, desenhaChama } from './objetos.js';
+import { flor, geraFarelo, desenhaFarelo, tesoura, seda, tubo, baseado, isqueiro, lingua, corpo, Fumaca, desenhaChama, quadros, desenhaQuadro } from './objetos.js';
+
+// Cenas desenhadas quadro a quadro (geradas no ChatGPT). Enquanto não carregam, vale a mão de código.
+const Q_PEGAR = quadros('pegar-flor', 8);
+const Q_BOLAR = quadros('bolar', 8);
+
+function comAlfa(a, fn) {
+  if (a <= 0) return;
+  const c = G.ctx, a0 = c.globalAlpha;
+  c.globalAlpha = a0 * a;
+  fn();
+  c.globalAlpha = a0;
+}
 import { sfx, nota } from './som.js';
 
 const ANC_R = { x: 800, y: 2600 }, ANC_L = { x: -800, y: 2600 }, ANC_T = { x: -1000, y: -2600 }, ANC_E = { x: -2800, y: 240 };
@@ -215,6 +227,12 @@ export const PASSOS = [
     aoAcao: () => sfx.pega(),
     draw(u) {
       const alfa = faixa(u, -1, -.2);
+      if (Q_PEGAR.pronto) {
+        // quadro 0: só a flor; 1 a 7: a mão entra, pega e ergue
+        const f = u < 0 ? 0 : 1 + u * 6.999;
+        desenhaQuadro(Q_PEGAR, f, 0, -190, 1.35, alfa);
+        return;
+      }
       const R = montar(trilha(u, [
         [-1, { ...FORA_R, pose: 'pincaAb', r: -14 }],
         [0, { at: [205, -62], pose: 'pincaAb', r: -20 }],
@@ -386,7 +404,15 @@ export const PASSOS = [
   // 5 ------------------------------------------------------------
   {
     v: 'bolar', modo: 'segure', dur: 5.5, pre: 1.4, cam: 60, loop: 'enrola',
+    // A cena desenhada entra por dissolvência sobre o fim da etapa anterior.
     draw(u) {
+      if (!Q_BOLAR.pronto) return this.codigo(u);
+      const k = suave(faixa(u, -1, -.25));
+      comAlfa(1 - k, () => this.codigo(u));
+      const f = u < 0 ? 0 : clamp(u) * 7.999;
+      desenhaQuadro(Q_BOLAR, f, 0, TUBO_Y + 40, 1.45, k);
+    },
+    codigo(u) {
       const W = C.M.sedaW;
       const g = suave(clamp(u));
       const topo = SEDA_Y - SEDA_H / 2, baixo = SEDA_Y + SEDA_H / 2;
@@ -427,6 +453,13 @@ export const PASSOS = [
   {
     v: 'lamber', modo: 'segure', dur: 3.8, pre: 1.8, cam: 115, loop: 'lambe',
     draw(u) {
+      if (!Q_BOLAR.pronto) return this.codigo(u);
+      // o último quadro desenhado se dissolve enquanto a cabeça sobe
+      const k = suave(faixa(u, -1, -.45));
+      comAlfa(k, () => this.codigo(u));
+      desenhaQuadro(Q_BOLAR, 7, 0, TUBO_Y + 40, 1.45, 1 - k);
+    },
+    codigo(u) {
       const W = C.M.sedaW, xm = W / 2 - 28, baixo = SEDA_Y + SEDA_H / 2;
       const k = suave(faixa(u, -1, -.15));
       const at = clamp(u);

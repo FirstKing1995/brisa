@@ -1,5 +1,5 @@
 // Objetos do ritual: flor, tesoura, seda, baseado, isqueiro, língua, fumaça.
-import { G, linha, arredonda, tf, arco, rng, lerp, clamp, rad, suave } from './motor.js';
+import { G, linha, arredonda, tf, arco, rng, lerp, clamp, rad, suave, faixa } from './motor.js';
 
 // ---------- Folha serrilhada (também usada na mandala) ----------
 export function folha(comp, larg, dentes = 6) {
@@ -14,6 +14,37 @@ export function folha(comp, larg, dentes = 6) {
     if (i < dentes) b.unshift([w * .68, y - comp / dentes * .58]);
   }
   return a.concat(b);
+}
+
+// ---------- Quadros desenhados (tira horizontal em anim/) ----------
+const cacheQ = {};
+export function quadros(nome, n) {
+  if (!cacheQ[nome]) {
+    const img = new Image();
+    const q = { img, n, pronto: false };
+    img.onload = () => { q.pronto = true; };
+    img.src = `anim/${nome}.png`;
+    cacheQ[nome] = q;
+  }
+  return cacheQ[nome];
+}
+
+// f contínuo: cada quadro fica parado e só no fim passa rápido para o próximo, como desenho animado.
+export function desenhaQuadro(q, f, x, y, s = 1, alpha = 1) {
+  if (!q.pronto || alpha <= 0) return;
+  const c = G.ctx, w = q.img.width / q.n, h = q.img.height;
+  const k = Math.max(0, Math.min(q.n - 1, Math.floor(f)));
+  const t = suave(faixa(f - k, .72, 1));
+  c.save();
+  c.globalCompositeOperation = 'lighter';
+  const um = (i, a) => {
+    if (a <= 0 || i >= q.n) return;
+    c.globalAlpha = alpha * a;
+    c.drawImage(q.img, i * w, 0, w, h, x - w * s / 2, y - h * s / 2, w * s, h * s);
+  };
+  um(k, 1 - t);
+  um(k + 1, t);
+  c.restore();
 }
 
 // ---------- Flor ----------
