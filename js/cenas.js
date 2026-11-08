@@ -12,6 +12,11 @@ const Q_DECHAVAR = quadros('dechavar', 21);
 const Q_PLANTA = quadros('plantinha', 22);
 const Q_ACENDER = quadros('acender', 22);
 const Q_SEDA = quadros('seda', 19);
+const Q_LAMBER = quadros('lamber', 22);
+const Q_FINALIZAR = quadros('finalizar', 22);
+const Q_RELAXAR = quadros('relaxar', 22);
+// do lamber ao acender a câmera fica no close de lado; só o fumar volta para a vista de cima
+const closesProntos = () => Q_LAMBER.pronto && Q_FINALIZAR.pronto && Q_ACENDER.pronto;
 // a seda desenhada termina na mesma altura da seda dos quadros de colocar a erva
 const SEDA_QY = 168;
 // close de lado do acender: centro e escala na tela, e onde nasce a faísca no quadro
@@ -495,6 +500,13 @@ export const PASSOS = [
     v: 'lamber', modo: 'segure', dur: 3.8, pre: 1.8, cam: 115, loop: 'lambe',
     draw(u) {
       if (!Q_BOLAR.pronto) return this.codigo(u);
+      if (closesProntos()) {
+        // o bolar se dissolve no close dos lábios
+        const k = suave(faixa(u, -1, -.3));
+        desenhaQuadro(Q_BOLAR, 24, 0, TUBO_Y + 40, 1.45, 1 - k);
+        desenhaQuadro(Q_LAMBER, u < 0 ? 0 : clamp(u) * 21, CLOSE.x, CLOSE.y, CLOSE.s, k);
+        return;
+      }
       // o último quadro desenhado se dissolve enquanto a cabeça sobe
       const k = suave(faixa(u, -1, -.45));
       comAlfa(k, () => this.codigo(u));
@@ -529,6 +541,12 @@ export const PASSOS = [
   {
     v: 'finalizar', modo: 'toque', dur: 3, pre: 1, cam: 115, aoAcao: () => { sfx.papel(); setTimeout(() => nota(523.25, .05, 1.6), 1500); },
     draw(u) {
+      if (!closesProntos()) return this.codigo(u);
+      const k = suave(faixa(u, -1, -.3));
+      desenhaQuadro(Q_LAMBER, 21, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
+      desenhaQuadro(Q_FINALIZAR, u < 0 ? 0 : clamp(u / .9) * 21, CLOSE.x, CLOSE.y, CLOSE.s, k);
+    },
+    codigo(u) {
       const W = C.M.sedaW;
       const xm = W / 2 - 28, baixo = SEDA_Y + SEDA_H / 2;
       const dx = u < 0 ? lerp(-DESLIZE, 0, suave(faixa(u, -1, -.1))) : 0;
@@ -567,7 +585,14 @@ export const PASSOS = [
   // 8 ------------------------------------------------------------
   {
     v: 'pegar o isqueiro', modo: 'toque', dur: 1.5, pre: .3, cam: 115, aoAcao: () => sfx.pega(),
+    // o baseado pronto dá lugar ao primeiro quadro do acender, que sobe de baixo
     draw(u) {
+      if (!closesProntos()) return this.codigo(u);
+      const k = suave(faixa(u, -1, .7));
+      desenhaQuadro(Q_FINALIZAR, 21, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
+      desenhaQuadro(Q_ACENDER, 0, CLOSE.x, CLOSE.y + 120 * (1 - k), CLOSE.s, k);
+    },
+    codigo(u) {
       const W = C.M.sedaW;
       const L = montar(trilha(u, [[-1, keyJunta], [1, keyJunta]], baseCL()));
       const R = montar(trilha(u, [
@@ -605,7 +630,7 @@ export const PASSOS = [
       if (fase < n - .85) f = Math.sin(Math.PI * clamp(fase - Math.floor(fase))) > .4 ? 3 : 0;
       else if (u < .6) f = 3 + 12 * faixa(fase, n - .85, n);
       else f = 15 + 6 * faixa(u, .6, 1);
-      const k = suave(faixa(u, -1, -.1));
+      const k = closesProntos() ? 1 : suave(faixa(u, -1, -.1));
       comAlfa(1 - k, () => this.codigo(u));
       desenhaQuadro(Q_ACENDER, f, CLOSE.x, CLOSE.y, CLOSE.s, k);
       C.pos.topoIsq = [CLOSE.x + CLOSE.faisca[0] * CLOSE.s, CLOSE.y + CLOSE.faisca[1] * CLOSE.s];
@@ -689,7 +714,20 @@ export const PASSOS = [
   // Relaxar: a cabeça desce e sai de cena, e sobram as duas mãos abertas.
   {
     v: 'relaxar', modo: 'toque', dur: 4.4, pre: .6, cam: 115, aoAcao: () => { sfx.solta(.5); C.fitaBrasa && (C.fitaBrasa.ativa = false); },
+    // a vista de cima se dissolve no close do cinzeiro
     draw(u) {
+      if (!Q_RELAXAR.pronto) return this.codigo(u);
+      const k = suave(faixa(u, -1, .05));
+      comAlfa(1 - k, () => this.codigo(u));
+      if (k >= 1) {
+        C.pontaAcesa = null;
+        const cor = corFumaca();
+        C.fumaSopro.desenha(cor);
+        C.fumaBrasa.desenha(cor);
+      }
+      desenhaQuadro(Q_RELAXAR, u < 0 ? 0 : clamp(u / .9) * 21, CLOSE.x, CLOSE.y, CLOSE.s * .85, k);
+    },
+    codigo(u) {
       const comp = 92;
       const L = montar(trilha(u, [
         [-1, keyJunta],
@@ -725,6 +763,7 @@ export const PASSOS = [
       const cor = corFumaca();
       C.fumaSopro.desenha(cor);
       C.fumaBrasa.desenha(cor);
+      if (Q_RELAXAR.pronto) return desenhaQuadro(Q_RELAXAR, 21, CLOSE.x, CLOSE.y, CLOSE.s * .85, 1);
       const L = montar({ x: -196, y: 330, s: 1, r: 8, flip: true, pose: POSES.aberta, anc: ANC_L });
       const R = montar({ x: 196, y: 330, s: 1, r: -8, flip: false, pose: POSES.aberta, anc: ANC_R, pulseira: C.M.pulseira, anel: C.M.anel, tatuagem: C.M.tatuagem });
       mao(L); mao(R);
