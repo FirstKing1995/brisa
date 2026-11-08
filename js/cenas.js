@@ -7,6 +7,11 @@ import { flor, geraFarelo, desenhaFarelo, tesoura, seda, tubo, baseado, isqueiro
 // Cenas desenhadas quadro a quadro (geradas no ChatGPT). Enquanto não carregam, vale a mão de código.
 const Q_PEGAR = quadros('pegar-flor', 25);
 const Q_BOLAR = quadros('bolar', 25);
+const Q_CORTAR = quadros('cortar', 21);
+const Q_DECHAVAR = quadros('dechavar', 21);
+const Q_PLANTA = quadros('plantinha', 22);
+// a seda fica um pouco abaixo do centro dos quadros desenhados
+const PLANTA_Y = 165 - 50;
 
 function comAlfa(a, fn) {
   if (a <= 0) return;
@@ -250,6 +255,13 @@ export const PASSOS = [
   {
     v: 'cortar', modo: 'toque', n: 4, marco: .8, dur: 4, pre: 1.1, cam: -115, aoAcao: () => sfx.corte(),
     draw(u) {
+      if (!Q_CORTAR.pronto || !Q_PEGAR.pronto) return this.codigo(u);
+      // entra: a flor erguida da etapa anterior vira o primeiro quadro do corte
+      const k = suave(faixa(u, -1, -.3));
+      desenhaQuadro(Q_PEGAR, 24, 0, -190, 1.35, 1 - k);
+      desenhaQuadro(Q_CORTAR, u < 0 ? 0 : clamp(u / .8) * 20, 0, -190, 1.35, k);
+    },
+    codigo(u) {
       const n = 4;
       const fase = clamp(u / .8) * n;
       const cortes = Math.min(n, Math.floor(fase + .5));
@@ -301,6 +313,13 @@ export const PASSOS = [
       }
     },
     draw(u) {
+      if (!Q_DECHAVAR.pronto || !Q_CORTAR.pronto) return this.codigo(u);
+      C.pos.pR = C.pos.pL = null;
+      const k = suave(faixa(u, -1, -.3));
+      desenhaQuadro(Q_CORTAR, 20, 0, -190, 1.35, 1 - k);
+      desenhaQuadro(Q_DECHAVAR, u < 0 ? 0 : clamp(u) * 20, 0, -190, 1.35, k);
+    },
+    codigo(u) {
       const esf = C.segura * (.5 + .5 * Math.sin(G.t * 10));
       const p = mistura(POSES.pinca, POSES.esfrega, esf);
       const keysR = [
@@ -332,7 +351,14 @@ export const PASSOS = [
   // 3 ------------------------------------------------------------
   {
     v: 'pegar a seda', modo: 'toque', dur: 1.9, pre: 1.1, cam: 30, aoAcao: () => sfx.papel(),
+    // o último quadro do dechavar se dissolve no montinho desenhado por código
     draw(u) {
+      if (!Q_DECHAVAR.pronto) return this.codigo(u);
+      const k = suave(faixa(u, -1, -.4));
+      desenhaQuadro(Q_DECHAVAR, 20, 0, -190, 1.35, 1 - k);
+      comAlfa(k, () => this.codigo(u));
+    },
+    codigo(u) {
       const W = C.M.sedaW;
       const fim = [W / 2, SEDA_Y + 22];
       const hr = trilha(u, [
@@ -373,6 +399,13 @@ export const PASSOS = [
       if (seg && u < 1 && C.pos.pT && Math.random() < dt * 34) emiteBits(C.pos.pT[0], C.pos.pT[1] + 6, SEDA_Y + (Math.random() - .5) * 18);
     },
     draw(u) {
+      if (!Q_PLANTA.pronto) return this.codigo(u);
+      const k = suave(faixa(u, -1, -.3));
+      comAlfa(1 - k, () => this.codigo(u));
+      if (k >= 1) C.pos.pT = null;
+      desenhaQuadro(Q_PLANTA, u < 0 ? 0 : clamp(u) * 21, 0, PLANTA_Y, 1.4, k);
+    },
+    codigo(u) {
       const W = C.M.sedaW;
       const fim = [W / 2, SEDA_Y + 22];
       const R = montar(trilha(u, [[-1, { at: fim, pose: 'pinca', r: -24 }], [1, { at: fim, pose: 'pinca', r: -24 }]], baseR()));
@@ -408,7 +441,8 @@ export const PASSOS = [
     draw(u) {
       if (!Q_BOLAR.pronto) return this.codigo(u);
       const k = suave(faixa(u, -1, -.25));
-      comAlfa(1 - k, () => this.codigo(u));
+      if (Q_PLANTA.pronto) desenhaQuadro(Q_PLANTA, 21, 0, PLANTA_Y, 1.4, 1 - k);
+      else comAlfa(1 - k, () => this.codigo(u));
       const f = u < 0 ? 0 : clamp(u) * 24;
       desenhaQuadro(Q_BOLAR, f, 0, TUBO_Y + 40, 1.45, k);
     },
