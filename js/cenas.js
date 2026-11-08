@@ -10,6 +10,9 @@ const Q_BOLAR = quadros('bolar', 25);
 const Q_CORTAR = quadros('cortar', 21);
 const Q_DECHAVAR = quadros('dechavar', 21);
 const Q_PLANTA = quadros('plantinha', 22);
+const Q_ACENDER = quadros('acender', 22);
+// close de lado do acender: centro e escala na tela, e onde nasce a faísca no quadro
+const CLOSE = { x: 0, y: 115, s: 2.1, faisca: [-34, -75] };
 // a seda fica um pouco abaixo do centro dos quadros desenhados
 const PLANTA_Y = 165 - 50;
 
@@ -579,7 +582,7 @@ export const PASSOS = [
   },
   // 9 ------------------------------------------------------------
   {
-    v: 'acender', modo: 'toque', marco: .6, pre: .1, cam: 115,
+    v: 'acender', modo: 'toque', marco: .6, pre: .6, cam: 115,
     get n() { return C.M.tentativas; },
     get dur() { return 1.6 + C.M.tentativas * .7; },
     aoAcao(k) {
@@ -588,7 +591,23 @@ export const PASSOS = [
       if (R) for (let i = 0; i < 10; i++) C.faiscas.push({ x: R[0], y: R[1], vx: (Math.random() - .5) * 240, vy: -60 - Math.random() * 160, v: .2 + Math.random() * .3 });
       if (k >= C.M.tentativas) sfx.fogo();
     },
+    // Close de lado: cada toque é uma faísca; no último a chama pega e a brasa acende.
+    // Quadros reais na tira: 0 apagado, 3 faísca, 6 a 15 chama, 18 e 21 brasa com fumaça.
     draw(u) {
+      if (!Q_ACENDER.pronto) return this.codigo(u);
+      const n = C.M.tentativas;
+      const fase = clamp(u / .6) * n;
+      let f;
+      if (fase < n - .85) f = Math.sin(Math.PI * clamp(fase - Math.floor(fase))) > .4 ? 3 : 0;
+      else if (u < .6) f = 3 + 12 * faixa(fase, n - .85, n);
+      else f = 15 + 6 * faixa(u, .6, 1);
+      const k = suave(faixa(u, -1, -.1));
+      comAlfa(1 - k, () => this.codigo(u));
+      desenhaQuadro(Q_ACENDER, f, CLOSE.x, CLOSE.y, CLOSE.s, k);
+      C.pos.topoIsq = [CLOSE.x + CLOSE.faisca[0] * CLOSE.s, CLOSE.y + CLOSE.faisca[1] * CLOSE.s];
+      desenhaBits();
+    },
+    codigo(u) {
       const W = C.M.sedaW;
       const n = C.M.tentativas;
       const L = montar(trilha(u, [[-1, keyJunta], [1, keyJunta]], baseCL()));
@@ -625,7 +644,14 @@ export const PASSOS = [
     aoEntrar() {
       if (!C.fitaBrasa) C.fitaBrasa = C.fumaBrasa.nova(0, 0, { abre: .55, vida: 6.5 });
     },
+    // o close do acender se dissolve de volta na vista de cima
     draw(u) {
+      if (!Q_ACENDER.pronto) return this.codigo(u);
+      const k = suave(faixa(u, -1, -.15));
+      desenhaQuadro(Q_ACENDER, 21, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
+      comAlfa(k, () => this.codigo(u));
+    },
+    codigo(u) {
       const W = C.M.sedaW;
       const pux = suave(C.puxa);
       const pin = [lerp(JUNTA_PINCA[0], PINCA_BOCA[0], pux), lerp(JUNTA_PINCA[1], PINCA_BOCA[1], pux)];
