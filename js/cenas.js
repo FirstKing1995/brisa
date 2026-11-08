@@ -11,6 +11,9 @@ const Q_CORTAR = quadros('cortar', 21);
 const Q_DECHAVAR = quadros('dechavar', 21);
 const Q_PLANTA = quadros('plantinha', 22);
 const Q_ACENDER = quadros('acender', 22);
+const Q_SEDA = quadros('seda', 19);
+// a seda desenhada termina na mesma altura da seda dos quadros de colocar a erva
+const SEDA_QY = 168;
 // close de lado do acender: centro e escala na tela, e onde nasce a faísca no quadro
 const CLOSE = { x: 0, y: 115, s: 2.1, faisca: [-34, -75] };
 // a seda fica um pouco abaixo do centro dos quadros desenhados
@@ -356,10 +359,10 @@ export const PASSOS = [
     v: 'pegar a seda', modo: 'toque', dur: 1.9, pre: 1.1, cam: 30, aoAcao: () => sfx.papel(),
     // o último quadro do dechavar se dissolve no montinho desenhado por código
     draw(u) {
-      if (!Q_DECHAVAR.pronto) return this.codigo(u);
+      if (!Q_DECHAVAR.pronto || !Q_SEDA.pronto) return this.codigo(u);
       const k = suave(faixa(u, -1, -.4));
       desenhaQuadro(Q_DECHAVAR, 20, 0, -190, 1.35, 1 - k);
-      comAlfa(k, () => this.codigo(u));
+      desenhaQuadro(Q_SEDA, u < 0 ? 0 : clamp(u / .8) * 18, 0, SEDA_QY, 1.4, k);
     },
     codigo(u) {
       const W = C.M.sedaW;
@@ -404,7 +407,8 @@ export const PASSOS = [
     draw(u) {
       if (!Q_PLANTA.pronto) return this.codigo(u);
       const k = suave(faixa(u, -1, -.3));
-      comAlfa(1 - k, () => this.codigo(u));
+      if (Q_SEDA.pronto) desenhaQuadro(Q_SEDA, 18, 0, SEDA_QY, 1.4, 1 - k);
+      else comAlfa(1 - k, () => this.codigo(u));
       if (k >= 1) C.pos.pT = null;
       desenhaQuadro(Q_PLANTA, u < 0 ? 0 : clamp(u) * 21, 0, PLANTA_Y, 1.4, k);
     },
