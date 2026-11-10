@@ -2,10 +2,10 @@
 // de 0 a 1 é a ação comandada pelo jogador.
 import { G, lerp, clamp, suave, faixa, rad, rng, arco, linha } from './motor.js';
 import { POSES, mistura, pincaLocal, posLocalParaMundo, montar, maoFundo, maoFrente, mao } from './mao.js';
-import { flor, geraFarelo, desenhaFarelo, tesoura, seda, tubo, baseado, isqueiro, lingua, corpo, Fumaca, desenhaChama, quadros, desenhaQuadro } from './objetos.js';
+import { flor, geraFarelo, desenhaFarelo, tesoura, seda, tubo, baseado, isqueiro, lingua, corpo, Fumaca, desenhaChama, quadros, desenhaQuadro, comVideo } from './objetos.js';
 
 // Cenas desenhadas quadro a quadro (geradas no ChatGPT). Enquanto não carregam, vale a mão de código.
-const Q_PEGAR = quadros('pegar-flor', 25);
+const Q_PEGAR = comVideo(quadros('pegar-flor', 25), 'pegar-flor-video', 72);
 const Q_BOLAR = quadros('bolar', 25);
 const Q_CORTAR = quadros('cortar', 21);
 const Q_DECHAVAR = quadros('dechavar', 21);
@@ -244,7 +244,8 @@ export function sopra(forca) {
 export const PASSOS = [
   // 0 ------------------------------------------------------------
   {
-    v: 'pegar a flor', modo: 'toque', dur: 2.3, pre: 1.5, cam: -115,
+    v: 'pegar a flor', modo: 'toque', pre: 1.5, cam: -115,
+    get dur() { return Q_PEGAR.video?.pronto ? 4 : 2.3; },
     aoAcao: () => sfx.pega(),
     draw(u) {
       const alfa = faixa(u, -1, -.2);

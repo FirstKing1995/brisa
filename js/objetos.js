@@ -30,8 +30,17 @@ export function quadros(nome, n, colunas = n) {
   return cacheQ[nome];
 }
 
+// Troca uma tira desenhada por um vídeo convertido (grade de 10 colunas, mesmo tamanho de quadro).
+// O índice da tira antiga é levado na proporção para o vídeo; ?semvideo volta às tiras.
+const SEM_VIDEO = /[?&]semvideo/.test(location.search);
+export function comVideo(q, nome, n) {
+  if (!SEM_VIDEO) q.video = quadros(nome, n, 10);
+  return q;
+}
+
 // f contínuo: mistura o quadro atual com o próximo para o movimento correr sem travadas.
 export function desenhaQuadro(q, f, x, y, s = 1, alpha = 1) {
+  if (q.video?.pronto) return desenhaQuadro(q.video, f * (q.video.n - 1) / (q.n - 1), x, y, s, alpha);
   if (!q.pronto || alpha <= 0) return;
   const c = G.ctx, w = q.img.width / q.colunas, h = q.img.height / Math.ceil(q.n / q.colunas);
   f = Math.max(0, Math.min(q.n - 1, f));
