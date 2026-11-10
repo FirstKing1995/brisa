@@ -267,12 +267,69 @@ function desenha() {
   G.cor = '#f4f4f0'; G.fundo = '#000'; G.amp = 1; G.derrete = 0;
 }
 
+// ---------- Acabamento: brilho com rastro, grão e vinheta ----------
+// Só 3 passadas na tela inteira: reduzir, somar o brilho ampliado e cobrir com grão+vinheta.
+// O rastro vive no brilho, em resolução baixa: as linhas ficam nítidas e o halo se arrasta.
+// "?simples" desliga tudo, para comparar.
+const acabado = !/[?&]simples/.test(location.search);
+const novaTela = () => { const c = document.createElement('canvas'); return [c, c.getContext('2d')]; };
+const [b2, c2] = novaTela();    // metade
+const [b4, c4] = novaTela();    // um quarto, com rastro
+const [b8, c8] = novaTela();    // um oitavo
+const [bg, cg] = novaTela();    // brilho final, um quarto
+let capas = [];                 // 4 camadas de grão + vinheta, em meia resolução
+const MEIA_VIDA_RASTRO = .09;   // segundos para o halo cair à metade
+function montaCapas() {
+  const w = Math.ceil(W / 2), h = Math.ceil(H / 2);
+  capas = Array.from({ length: 4 }, () => {
+    const [c, g] = novaTela();
+    c.width = w; c.height = h;
+    const im = g.createImageData(w, h);
+    for (let i = 0; i < im.data.length; i += 4) {
+      const v = Math.random() * 255;
+      im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 12;
+    }
+    g.putImageData(im, 0, 0);
+    const vg = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * .35, w / 2, h / 2, Math.hypot(w, h) * .6);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.6)');
+    g.fillStyle = vg; g.fillRect(0, 0, w, h);
+    return c;
+  });
+}
+function acabamento(dt) {
+  if (b2.width !== Math.ceil(W / 2) || b2.height !== Math.ceil(H / 2)) {
+    [[b2, 2], [b4, 4], [b8, 8], [bg, 4]].forEach(([c, k]) => { c.width = Math.ceil(W / k); c.height = Math.ceil(H / k); });
+    montaCapas();
+  }
+  const w4 = b4.width, h4 = b4.height;
+  c2.drawImage(tela, 0, 0, b2.width, b2.height);
+  c4.globalCompositeOperation = 'source-over';
+  c4.fillStyle = `rgba(0,0,0,${1 - Math.pow(.5, dt / MEIA_VIDA_RASTRO)})`;
+  c4.fillRect(0, 0, w4, h4);
+  c4.globalCompositeOperation = 'lighten';
+  c4.drawImage(b2, 0, 0, w4, h4);
+  c8.drawImage(b4, 0, 0, b8.width, b8.height);
+  cg.globalCompositeOperation = 'source-over';
+  cg.clearRect(0, 0, w4, h4);
+  cg.globalAlpha = .34; cg.drawImage(b4, 0, 0);
+  cg.globalCompositeOperation = 'lighter';
+  cg.globalAlpha = .28; cg.drawImage(b8, 0, 0, w4, h4);
+  cg.globalAlpha = 1;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 1;
+  ctx.drawImage(bg, 0, 0, W, H);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(capas[Math.floor(J.t * 12) % 4], 0, 0, W, H);
+}
+
 let ult = 0;
 function quadro(ms) {
   const dt = Math.min(.05, (ms - ult) / 1000 || 0);
   ult = ms;
   atualiza(dt);
   desenha();
+  if (acabado) acabamento(dt);
   requestAnimationFrame(quadro);
 }
 
