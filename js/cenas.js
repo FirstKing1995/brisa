@@ -7,7 +7,7 @@ import { flor, geraFarelo, desenhaFarelo, tesoura, seda, tubo, baseado, isqueiro
 // Cenas desenhadas quadro a quadro (geradas no ChatGPT). Enquanto não carregam, vale a mão de código.
 const Q_PEGAR = comVideo(quadros('pegar-flor', 25), 'pegar-flor-video', 72);
 const Q_BOLAR = quadros('bolar', 25);
-const Q_CORTAR = quadros('cortar', 21);
+const Q_CORTAR = comVideo(quadros('cortar', 21), 'cortar-video', 81);
 const Q_DECHAVAR = quadros('dechavar', 21);
 const Q_PLANTA = quadros('plantinha', 22);
 const Q_ACENDER = quadros('acender', 22);
