@@ -18,10 +18,11 @@ export function folha(comp, larg, dentes = 6) {
 
 // ---------- Quadros desenhados (tira horizontal em anim/) ----------
 const cacheQ = {};
-export function quadros(nome, n) {
+// colunas: para grades (vídeo convertido); sem ela, a imagem é uma tira horizontal.
+export function quadros(nome, n, colunas = n) {
   if (!cacheQ[nome]) {
     const img = new Image();
-    const q = { img, n, pronto: false };
+    const q = { img, n, colunas, pronto: false };
     img.onload = () => { q.pronto = true; };
     img.src = `anim/${nome}.png`;
     cacheQ[nome] = q;
@@ -32,7 +33,7 @@ export function quadros(nome, n) {
 // f contínuo: mistura o quadro atual com o próximo para o movimento correr sem travadas.
 export function desenhaQuadro(q, f, x, y, s = 1, alpha = 1) {
   if (!q.pronto || alpha <= 0) return;
-  const c = G.ctx, w = q.img.width / q.n, h = q.img.height;
+  const c = G.ctx, w = q.img.width / q.colunas, h = q.img.height / Math.ceil(q.n / q.colunas);
   f = Math.max(0, Math.min(q.n - 1, f));
   const k = Math.min(q.n - 1, Math.floor(f));
   const t = f - k;
@@ -41,7 +42,7 @@ export function desenhaQuadro(q, f, x, y, s = 1, alpha = 1) {
   const um = (i, a) => {
     if (a <= 0 || i >= q.n) return;
     c.globalAlpha = alpha * a;
-    c.drawImage(q.img, i * w, 0, w, h, x - w * s / 2, y - h * s / 2, w * s, h * s);
+    c.drawImage(q.img, (i % q.colunas) * w, Math.floor(i / q.colunas) * h, w, h, x - w * s / 2, y - h * s / 2, w * s, h * s);
   };
   um(k, 1 - t);
   um(k + 1, t);

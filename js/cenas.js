@@ -16,6 +16,11 @@ const Q_LAMBER = quadros('lamber', 22);
 const Q_FINALIZAR = quadros('finalizar', 22);
 const Q_RELAXAR = quadros('relaxar', 22);
 // do lamber ao acender a câmera fica no close de lado; só o fumar volta para a vista de cima
+// Acender feito a partir de um vídeo do Gemini (Veo): 102 quadros a 12 por segundo, em grade de 10.
+// ?semvideo volta para a tira antiga, para comparar.
+const Q_ACV = quadros('acender-video', 102, 10);
+const acv = () => !/[?&]semvideo/.test(location.search) && Q_ACV.pronto;
+const ACV_BASE = 12, ACV_CHAMA = 20, ACV_FIM = 101, ACV_MARCO = .3;
 const closesProntos = () => Q_LAMBER.pronto && Q_FINALIZAR.pronto && Q_ACENDER.pronto;
 // a seda desenhada termina na mesma altura da seda dos quadros de colocar a erva
 const SEDA_QY = 168;
@@ -590,7 +595,8 @@ export const PASSOS = [
       if (!closesProntos()) return this.codigo(u);
       const k = suave(faixa(u, -1, .7));
       desenhaQuadro(Q_FINALIZAR, 21, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
-      desenhaQuadro(Q_ACENDER, 0, CLOSE.x, CLOSE.y + 120 * (1 - k), CLOSE.s, k);
+      if (acv()) desenhaQuadro(Q_ACV, ACV_BASE, CLOSE.x, CLOSE.y + 120 * (1 - k), CLOSE.s, k);
+      else desenhaQuadro(Q_ACENDER, 0, CLOSE.x, CLOSE.y + 120 * (1 - k), CLOSE.s, k);
     },
     codigo(u) {
       const W = C.M.sedaW;
@@ -611,9 +617,11 @@ export const PASSOS = [
   },
   // 9 ------------------------------------------------------------
   {
-    v: 'acender', modo: 'toque', marco: .6, pre: .6, cam: 115,
+    v: 'acender', modo: 'toque', pre: .6, cam: 115,
     get n() { return C.M.tentativas; },
-    get dur() { return 1.6 + C.M.tentativas * .7; },
+    // com o vídeo, os toques ocupam só o começo e o resto (chama, brasa, fumaça) corre em ~5,5 s
+    get marco() { return acv() ? ACV_MARCO : .6; },
+    get dur() { return acv() ? 7.6 + C.M.tentativas * .3 : 1.6 + C.M.tentativas * .7; },
     aoAcao(k) {
       sfx.clique();
       const R = C.pos.topoIsq;
@@ -623,6 +631,7 @@ export const PASSOS = [
     // Close de lado: cada toque é uma faísca; no último a chama pega e a brasa acende.
     // Quadros reais na tira: 0 apagado, 3 faísca, 6 a 15 chama, 18 e 21 brasa com fumaça.
     draw(u) {
+      if (acv()) return this.video(u);
       if (!Q_ACENDER.pronto) return this.codigo(u);
       const n = C.M.tentativas;
       const fase = clamp(u / .6) * n;
@@ -633,6 +642,19 @@ export const PASSOS = [
       const k = closesProntos() ? 1 : suave(faixa(u, -1, -.1));
       comAlfa(1 - k, () => this.codigo(u));
       desenhaQuadro(Q_ACENDER, f, CLOSE.x, CLOSE.y, CLOSE.s, k);
+      C.pos.topoIsq = [CLOSE.x + CLOSE.faisca[0] * CLOSE.s, CLOSE.y + CLOSE.faisca[1] * CLOSE.s];
+      desenhaBits();
+    },
+    // Toques que falham: a roda gira e solta faísca (12 → 17 → 12). O último leva à chama (20)
+    // e daí o vídeo corre até a brasa com fumaça (101).
+    video(u) {
+      const n = C.M.tentativas;
+      const fase = clamp(u / ACV_MARCO) * n;
+      let f;
+      if (u >= ACV_MARCO) f = ACV_CHAMA + (ACV_FIM - ACV_CHAMA) * faixa(u, ACV_MARCO, 1);
+      else if (fase >= n - 1) f = ACV_BASE + (ACV_CHAMA - ACV_BASE) * faixa(fase, n - 1, n);
+      else f = ACV_BASE + 5 * Math.sin(Math.PI * clamp(fase - Math.floor(fase)));
+      desenhaQuadro(Q_ACV, f, CLOSE.x, CLOSE.y, CLOSE.s, 1);
       C.pos.topoIsq = [CLOSE.x + CLOSE.faisca[0] * CLOSE.s, CLOSE.y + CLOSE.faisca[1] * CLOSE.s];
       desenhaBits();
     },
@@ -677,7 +699,8 @@ export const PASSOS = [
     draw(u) {
       if (!Q_ACENDER.pronto) return this.codigo(u);
       const k = suave(faixa(u, -1, -.15));
-      desenhaQuadro(Q_ACENDER, 21, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
+      if (acv()) desenhaQuadro(Q_ACV, ACV_FIM, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
+      else desenhaQuadro(Q_ACENDER, 21, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
       comAlfa(k, () => this.codigo(u));
     },
     codigo(u) {
