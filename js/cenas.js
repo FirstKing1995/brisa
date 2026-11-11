@@ -8,10 +8,10 @@ import { flor, geraFarelo, desenhaFarelo, tesoura, seda, tubo, baseado, isqueiro
 const Q_PEGAR = comVideo(quadros('pegar-flor', 25), 'pegar-flor-video', 72);
 const Q_BOLAR = quadros('bolar', 25);
 const Q_CORTAR = comVideo(quadros('cortar', 21), 'cortar-video', 81);
-const Q_DECHAVAR = quadros('dechavar', 21);
+const Q_DECHAVAR = comVideo(quadros('dechavar', 21), 'dechavar-video', 108);
 const Q_PLANTA = quadros('plantinha', 22);
 const Q_ACENDER = quadros('acender', 22);
-const Q_SEDA = quadros('seda', 19);
+const Q_SEDA = comVideo(quadros('seda', 19), 'seda-video', 96);
 const Q_LAMBER = quadros('lamber', 22);
 const Q_FINALIZAR = quadros('finalizar', 22);
 const Q_RELAXAR = quadros('relaxar', 22);
@@ -322,7 +322,8 @@ export const PASSOS = [
   },
   // 2 ------------------------------------------------------------
   {
-    v: 'dechavar', modo: 'segure', dur: 6, pre: 1.5, cam: -100, loop: 'esfrega',
+    v: 'dechavar', modo: 'segure', pre: 1.5,
+    get dur() { return Q_DECHAVAR.video?.pronto ? 8 : 6; }, cam: -100, loop: 'esfrega',
     tique(dt, u, seg) {
       if (seg && u < 1 && C.pos.pR) {
         if (Math.random() < dt * 22) emiteBits(C.pos.pR[0], C.pos.pR[1] + 8, MONTE_Y - 6);
@@ -367,7 +368,8 @@ export const PASSOS = [
   },
   // 3 ------------------------------------------------------------
   {
-    v: 'pegar a seda', modo: 'toque', dur: 1.9, pre: 1.1, cam: 30, aoAcao: () => sfx.papel(),
+    v: 'pegar a seda', modo: 'toque', pre: 1.1,
+    get dur() { return Q_SEDA.video?.pronto ? 4 : 1.9; }, cam: 30, aoAcao: () => sfx.papel(),
     // o último quadro do dechavar se dissolve no montinho desenhado por código
     draw(u) {
       if (!Q_DECHAVAR.pronto || !Q_SEDA.pronto) return this.codigo(u);
