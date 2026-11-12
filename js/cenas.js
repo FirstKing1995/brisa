@@ -14,7 +14,7 @@ const Q_ACENDER = quadros('acender', 22);
 const Q_SEDA = comVideo(quadros('seda', 19), 'seda-video', 96);
 const Q_LAMBER = comVideo(quadros('lamber', 22), 'lamber-video', 120);
 const Q_FINALIZAR = quadros('finalizar', 22);
-const Q_RELAXAR = quadros('relaxar', 22);
+const Q_RELAXAR = comVideo(quadros('relaxar', 22), 'relaxar-video', 79);
 // do lamber ao acender a câmera fica no close de lado; só o fumar volta para a vista de cima
 // Acender feito a partir de um vídeo do Gemini (Veo): 102 quadros a 12 por segundo, em grade de 10.
 // ?semvideo volta para a tira antiga, para comparar.
@@ -741,7 +741,8 @@ export const PASSOS = [
   // 11 -----------------------------------------------------------
   // Relaxar: a cabeça desce e sai de cena, e sobram as duas mãos abertas.
   {
-    v: 'relaxar', modo: 'toque', dur: 4.4, pre: .6, cam: 115, aoAcao: () => { sfx.solta(.5); C.fitaBrasa && (C.fitaBrasa.ativa = false); },
+    v: 'relaxar', modo: 'toque',
+    get dur() { return Q_RELAXAR.video?.pronto ? 6 : 4.4; }, pre: .6, cam: 115, aoAcao: () => { sfx.solta(.5); C.fitaBrasa && (C.fitaBrasa.ativa = false); },
     // a vista de cima se dissolve no close do cinzeiro
     draw(u) {
       if (!Q_RELAXAR.pronto) return this.codigo(u);
@@ -791,7 +792,9 @@ export const PASSOS = [
       const cor = corFumaca();
       C.fumaSopro.desenha(cor);
       C.fumaBrasa.desenha(cor);
-      if (Q_RELAXAR.pronto) return desenhaQuadro(Q_RELAXAR, 21, CLOSE.x, CLOSE.y, CLOSE.s * .85, 1);
+      // com o vídeo, a fumaça do cinzeiro vai e volta devagar (trecho sem a mão: 15 a 21 da tira)
+      const f = Q_RELAXAR.video?.pronto ? 18 + 3 * Math.cos(G.t * .5) : 21;
+      if (Q_RELAXAR.pronto) return desenhaQuadro(Q_RELAXAR, f, CLOSE.x, CLOSE.y, CLOSE.s * .85, 1);
       const L = montar({ x: -196, y: 330, s: 1, r: 8, flip: true, pose: POSES.aberta, anc: ANC_L });
       const R = montar({ x: 196, y: 330, s: 1, r: -8, flip: false, pose: POSES.aberta, anc: ANC_R, pulseira: C.M.pulseira, anel: C.M.anel, tatuagem: C.M.tatuagem });
       mao(L); mao(R);
