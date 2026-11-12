@@ -9,10 +9,10 @@ const Q_PEGAR = comVideo(quadros('pegar-flor', 25), 'pegar-flor-video', 72);
 const Q_BOLAR = quadros('bolar', 25);
 const Q_CORTAR = comVideo(quadros('cortar', 21), 'cortar-video', 81);
 const Q_DECHAVAR = comVideo(quadros('dechavar', 21), 'dechavar-video', 108);
-const Q_PLANTA = quadros('plantinha', 22);
+const Q_PLANTA = comVideo(quadros('plantinha', 22), 'plantinha-video', 114);
 const Q_ACENDER = quadros('acender', 22);
 const Q_SEDA = comVideo(quadros('seda', 19), 'seda-video', 96);
-const Q_LAMBER = quadros('lamber', 22);
+const Q_LAMBER = comVideo(quadros('lamber', 22), 'lamber-video', 120);
 const Q_FINALIZAR = quadros('finalizar', 22);
 const Q_RELAXAR = quadros('relaxar', 22);
 // do lamber ao acender a câmera fica no close de lado; só o fumar volta para a vista de cima
@@ -413,7 +413,8 @@ export const PASSOS = [
   },
   // 4 ------------------------------------------------------------
   {
-    v: 'colocar a plantinha', modo: 'segure', dur: 5.5, pre: 1.8, cam: 30, loop: 'salpica',
+    v: 'colocar a plantinha', modo: 'segure',
+    get dur() { return Q_PLANTA.video?.pronto ? 8 : 5.5; }, pre: 1.8, cam: 30, loop: 'salpica',
     tique(dt, u, seg) {
       if (seg && u < 1 && C.pos.pT && Math.random() < dt * 34) emiteBits(C.pos.pT[0], C.pos.pT[1] + 6, SEDA_Y + (Math.random() - .5) * 18);
     },
@@ -505,7 +506,8 @@ export const PASSOS = [
   // 6 ------------------------------------------------------------
   // A câmera está acima da pessoa: a cabeça sobe na tela e o tubo corre na frente da boca.
   {
-    v: 'lamber', modo: 'segure', dur: 3.8, pre: 1.8, cam: 115, loop: 'lambe',
+    v: 'lamber', modo: 'segure',
+    get dur() { return Q_LAMBER.video?.pronto ? 7 : 3.8; }, pre: 1.8, cam: 115, loop: 'lambe',
     draw(u) {
       if (!Q_BOLAR.pronto) return this.codigo(u);
       if (closesProntos()) {
