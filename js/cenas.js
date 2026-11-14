@@ -6,7 +6,8 @@ import { flor, geraFarelo, desenhaFarelo, tesoura, seda, tubo, baseado, isqueiro
 
 // Cenas desenhadas quadro a quadro (geradas no ChatGPT). Enquanto não carregam, vale a mão de código.
 const Q_PEGAR = comVideo(quadros('pegar-flor', 25), 'pegar-flor-video', 72);
-const Q_BOLAR = quadros('bolar', 25);
+// bolar: quadros mais largos (576) que a tira, na mesma escala, porque a câmera do vídeo se aproxima
+const Q_BOLAR = comVideo(quadros('bolar', 25), 'bolar-video', 56, 8);
 const Q_CORTAR = comVideo(quadros('cortar', 21), 'cortar-video', 81);
 const Q_DECHAVAR = comVideo(quadros('dechavar', 21), 'dechavar-video', 108);
 const Q_PLANTA = comVideo(quadros('plantinha', 22), 'plantinha-video', 114);
@@ -14,6 +15,10 @@ const Q_ACENDER = quadros('acender', 22);
 const Q_SEDA = comVideo(quadros('seda', 19), 'seda-video', 96);
 const Q_LAMBER = comVideo(quadros('lamber', 22), 'lamber-video', 120);
 const Q_FINALIZAR = quadros('finalizar', 22);
+// Fumar feito de um vídeo do Leonardo: a mão do isqueiro sai (até o quadro 40) e a nuvem cresce em volta da ponta.
+const Q_FUMAR = quadros('fumar-video', 79, 10);
+const fumarVideo = () => !/[?&]semvideo/.test(location.search) && Q_FUMAR.pronto;
+const FUMAR_SAI = 40;
 const Q_RELAXAR = comVideo(quadros('relaxar', 22), 'relaxar-video', 79);
 // do lamber ao acender a câmera fica no close de lado; só o fumar volta para a vista de cima
 // Acender feito a partir de um vídeo do Gemini (Veo): 102 quadros a 12 por segundo, em grade de 10.
@@ -98,7 +103,7 @@ export function novaSessao(n) {
   M.naSeda = geraFarelo(M.seed + 50, 150, (r) => [(r() * 2 - 1) * (M.sedaW / 2 - 28), (r() + r() - 1) * 13]);
   C.M = M;
   G.unha = M.unha;
-  C.bits.length = 0; C.faiscas.length = 0; C.tinta = 0; C.puxa = 0; C.pontaAcesa = null;
+  C.bits.length = 0; C.faiscas.length = 0; C.tinta = 0; C.puxa = 0; C.pontaAcesa = null; C.bocaSopro = null;
   if (C.fitaBrasa) { C.fitaBrasa.ativa = false; C.fitaBrasa = null; }
   return M;
 }
@@ -236,7 +241,7 @@ export function sopra(forca) {
   for (let i = 0; i < n; i++) {
     const lado = i - (n - 1) / 2;
     const f = C.fumaSopro.nova(0, 0, { vx: lado * 62, vy: -175 - Math.random() * 40, abre: 1.5, vida: 8, cor: corFumaca() });
-    C.sopros.push({ f, espera: i * .2, resta: .8 + forca * .9, acum: 0, x: BOCA.x + lado * 7, y: BOCA.y + 6 });
+    C.sopros.push({ f, espera: i * .2, resta: .8 + forca * .9, acum: 0, x: (C.bocaSopro || BOCA).x + lado * 7, y: (C.bocaSopro || BOCA).y + 6 });
   }
 }
 
@@ -457,7 +462,8 @@ export const PASSOS = [
   },
   // 5 ------------------------------------------------------------
   {
-    v: 'bolar', modo: 'segure', dur: 4.2, pre: 1.4, cam: 60, loop: 'enrola',
+    v: 'bolar', modo: 'segure',
+    get dur() { return Q_BOLAR.video?.pronto ? 6.5 : 4.2; }, pre: 1.4, cam: 60, loop: 'enrola',
     // A cena desenhada entra por dissolvência sobre o fim da etapa anterior.
     draw(u) {
       if (!Q_BOLAR.pronto) return this.codigo(u);
@@ -702,11 +708,23 @@ export const PASSOS = [
     },
     // o close do acender se dissolve de volta na vista de cima
     draw(u) {
+      if (fumarVideo()) return this.video(u);
       if (!Q_ACENDER.pronto) return this.codigo(u);
       const k = suave(faixa(u, -1, -.15));
       if (acv()) desenhaQuadro(Q_ACV, ACV_FIM, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
       else desenhaQuadro(Q_ACENDER, 21, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
       comAlfa(k, () => this.codigo(u));
+    },
+    // Com o vídeo o close continua: a mão do isqueiro sai antes da etapa e a nuvem cresce a cada trago.
+    // A fumaça soprada (código) sai do alto, de onde estaria a boca, fora do quadro.
+    video(u) {
+      C.tinta = clamp(u) * .85;
+      C.pontaAcesa = null;
+      C.bocaSopro = { x: CLOSE.x - 60, y: CLOSE.y - 300 };
+      const f = u < 0 ? (u + 1) * FUMAR_SAI : FUMAR_SAI + (Q_FUMAR.n - 1 - FUMAR_SAI) * clamp(u);
+      desenhaQuadro(Q_FUMAR, f, CLOSE.x, CLOSE.y, CLOSE.s, 1);
+      const cor = corFumaca();
+      C.fumaSopro.desenha(cor);
     },
     codigo(u) {
       const W = C.M.sedaW;
@@ -747,7 +765,11 @@ export const PASSOS = [
     draw(u) {
       if (!Q_RELAXAR.pronto) return this.codigo(u);
       const k = suave(faixa(u, -1, .05));
-      comAlfa(1 - k, () => this.codigo(u));
+      // com o fumar em vídeo, o close dele se dissolve no cinzeiro; sem ele, a vista de cima desenhada
+      if (fumarVideo()) {
+        desenhaQuadro(Q_FUMAR, Q_FUMAR.n - 1, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
+        C.fumaSopro.desenha(corFumaca());
+      } else comAlfa(1 - k, () => this.codigo(u));
       if (k >= 1) {
         C.pontaAcesa = null;
         const cor = corFumaca();

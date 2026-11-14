@@ -33,8 +33,8 @@ export function quadros(nome, n, colunas = n) {
 // Troca uma tira desenhada por um vídeo convertido (grade de 10 colunas, mesmo tamanho de quadro).
 // O índice da tira antiga é levado na proporção para o vídeo; ?semvideo volta às tiras.
 const SEM_VIDEO = /[?&]semvideo/.test(location.search);
-export function comVideo(q, nome, n) {
-  if (!SEM_VIDEO) q.video = quadros(nome, n, 10);
+export function comVideo(q, nome, n, colunas = 10) {
+  if (!SEM_VIDEO) q.video = quadros(nome, n, colunas);
   return q;
 }
 
