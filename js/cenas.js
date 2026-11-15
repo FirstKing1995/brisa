@@ -14,7 +14,7 @@ const Q_PLANTA = comVideo(quadros('plantinha', 22), 'plantinha-video', 114);
 const Q_ACENDER = quadros('acender', 22);
 const Q_SEDA = comVideo(quadros('seda', 19), 'seda-video', 96);
 const Q_LAMBER = comVideo(quadros('lamber', 22), 'lamber-video', 120);
-const Q_FINALIZAR = quadros('finalizar', 22);
+const Q_FINALIZAR = comVideo(quadros('finalizar', 22), 'finalizar-video', 120);
 // Fumar feito de um vídeo do Leonardo: a mão do isqueiro sai (até o quadro 40) e a nuvem cresce em volta da ponta.
 const Q_FUMAR = quadros('fumar-video', 79, 10);
 const fumarVideo = () => !/[?&]semvideo/.test(location.search) && Q_FUMAR.pronto;
@@ -555,7 +555,8 @@ export const PASSOS = [
   },
   // 7 ------------------------------------------------------------
   {
-    v: 'finalizar', modo: 'toque', dur: 3, pre: 1, cam: 115, aoAcao: () => { sfx.papel(); setTimeout(() => nota(523.25, .05, 1.6), 1500); },
+    v: 'finalizar', modo: 'toque',
+    get dur() { return Q_FINALIZAR.video?.pronto ? 6 : 3; }, pre: 1, cam: 115, aoAcao: () => { sfx.papel(); setTimeout(() => nota(523.25, .05, 1.6), 1500); },
     draw(u) {
       if (!closesProntos()) return this.codigo(u);
       const k = suave(faixa(u, -1, -.3));
