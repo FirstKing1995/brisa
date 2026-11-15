@@ -1,5 +1,5 @@
 import { G, clamp, lerp, suave, faixa } from './motor.js';
-import { PASSOS, C, novaSessao, atualizaEfeitos, sopra } from './cenas.js';
+import { PASSOS, C, novaSessao, atualizaEfeitos, sopra, rostoFinal } from './cenas.js';
 import { flor } from './objetos.js';
 import { Chapado, DURACAO } from './chapado.js';
 import { iniciarSom, tiqueSom, loop, pararLoops, faseChapada, alternarSom, proximaFaixa, quandoTrocarFaixa } from './som.js';
@@ -251,6 +251,8 @@ function desenha() {
   // Fase colorida: círculo de cor se abre a partir das mãos
   const fim = J.flood > DURACAO ? clamp(J.fimFade / 6) : 0;
   chapado.pinta(escala, J.cam);
+  // o rosto do chapar fica por baixo e some enquanto a cor se abre
+  if (J.flood < 6) rostoFinal(1 - suave(J.flood / 6));
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   const R = Math.hypot(W, H) * suave(J.flood / 5);
   ctx.save();

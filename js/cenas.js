@@ -10,16 +10,21 @@ const Q_PEGAR = comVideo(quadros('pegar-flor', 25), 'pegar-flor-video', 72);
 const Q_BOLAR = comVideo(quadros('bolar', 25), 'bolar-video', 56, 8);
 const Q_CORTAR = comVideo(quadros('cortar', 21), 'cortar-video', 81);
 const Q_DECHAVAR = comVideo(quadros('dechavar', 21), 'dechavar-video', 108);
-const Q_PLANTA = comVideo(quadros('plantinha', 22), 'plantinha-video', 114);
+const Q_PLANTA = comVideo(quadros('plantinha', 22), 'plantinha-video', 120);
 const Q_ACENDER = quadros('acender', 22);
 const Q_SEDA = comVideo(quadros('seda', 19), 'seda-video', 96);
 const Q_LAMBER = comVideo(quadros('lamber', 22), 'lamber-video', 120);
 const Q_FINALIZAR = comVideo(quadros('finalizar', 22), 'finalizar-video', 120);
-// Fumar feito de um vídeo do Leonardo: a mão do isqueiro sai (até o quadro 40) e a nuvem cresce em volta da ponta.
+// Fumar feito de um vídeo do Leonardo, com a boca de frente: a mão chega (até o quadro 10), ela traga e a ponta
+// brilha (até o 40), a mão tira o baseado (40 a 49) e ela solta a fumaça (62 a 78). Os tragos usam 10 a 40;
+// a saída e a fumaça passam na preparação do relaxar.
 const Q_FUMAR = quadros('fumar-video', 79, 10);
 const fumarVideo = () => !/[?&]semvideo/.test(location.search) && Q_FUMAR.pronto;
-const FUMAR_SAI = 40;
+const FUMAR_CHEGA = 10, FUMAR_TIRA = 40;
 const Q_RELAXAR = comVideo(quadros('relaxar', 22), 'relaxar-video', 79);
+// Chapar: o rosto de frente solta a fumaça, fecha os olhos e sorri (vídeo do Wan, 61 quadros a 12 por segundo).
+const Q_CHAPAR = quadros('chapar-video', 61, 10);
+const chaparVideo = () => !/[?&]semvideo/.test(location.search) && Q_CHAPAR.pronto;
 // do lamber ao acender a câmera fica no close de lado; só o fumar volta para a vista de cima
 // Acender feito a partir de um vídeo do Gemini (Veo): 102 quadros a 12 por segundo, em grade de 10.
 // ?semvideo volta para a tira antiga, para comparar.
@@ -716,16 +721,20 @@ export const PASSOS = [
       else desenhaQuadro(Q_ACENDER, 21, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
       comAlfa(k, () => this.codigo(u));
     },
-    // Com o vídeo o close continua: a mão do isqueiro sai antes da etapa e a nuvem cresce a cada trago.
-    // A fumaça soprada (código) sai do alto, de onde estaria a boca, fora do quadro.
+    // Com o vídeo: o close do isqueiro se dissolve na boca de frente; a cada trago o vídeo anda e a fumaça
+    // soprada (código) sai dos lábios.
     video(u) {
       C.tinta = clamp(u) * .85;
       C.pontaAcesa = null;
-      C.bocaSopro = { x: CLOSE.x - 60, y: CLOSE.y - 300 };
-      const f = u < 0 ? (u + 1) * FUMAR_SAI : FUMAR_SAI + (Q_FUMAR.n - 1 - FUMAR_SAI) * clamp(u);
-      desenhaQuadro(Q_FUMAR, f, CLOSE.x, CLOSE.y, CLOSE.s, 1);
-      const cor = corFumaca();
-      C.fumaSopro.desenha(cor);
+      C.bocaSopro = { x: CLOSE.x + 10, y: CLOSE.y - 15 };
+      const k = suave(faixa(u, -1, -.2));
+      if (k < 1) {
+        if (acv()) desenhaQuadro(Q_ACV, ACV_FIM, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
+        else if (Q_ACENDER.pronto) desenhaQuadro(Q_ACENDER, 21, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
+      }
+      const f = u < 0 ? 0 : FUMAR_CHEGA + (FUMAR_TIRA - FUMAR_CHEGA) * clamp(u);
+      desenhaQuadro(Q_FUMAR, f, CLOSE.x, CLOSE.y, CLOSE.s, k);
+      C.fumaSopro.desenha(corFumaca());
     },
     codigo(u) {
       const W = C.M.sedaW;
@@ -761,14 +770,15 @@ export const PASSOS = [
   // Relaxar: a cabeça desce e sai de cena, e sobram as duas mãos abertas.
   {
     v: 'relaxar', modo: 'toque',
-    get dur() { return Q_RELAXAR.video?.pronto ? 6 : 4.4; }, pre: .6, cam: 115, aoAcao: () => { sfx.solta(.5); C.fitaBrasa && (C.fitaBrasa.ativa = false); },
+    get dur() { return Q_RELAXAR.video?.pronto ? 6 : 4.4; }, get pre() { return fumarVideo() ? 3 : .6; }, cam: 115, aoAcao: () => { sfx.solta(.5); C.fitaBrasa && (C.fitaBrasa.ativa = false); },
     // a vista de cima se dissolve no close do cinzeiro
     draw(u) {
       if (!Q_RELAXAR.pronto) return this.codigo(u);
-      const k = suave(faixa(u, -1, .05));
-      // com o fumar em vídeo, o close dele se dissolve no cinzeiro; sem ele, a vista de cima desenhada
+      // com o fumar em vídeo, a preparação mostra a mão tirando o baseado e a fumaça saindo da boca,
+      // e só no fim se dissolve no cinzeiro; sem ele, a vista de cima desenhada
+      const k = suave(faixa(u, fumarVideo() ? -.22 : -1, .05));
       if (fumarVideo()) {
-        desenhaQuadro(Q_FUMAR, Q_FUMAR.n - 1, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
+        desenhaQuadro(Q_FUMAR, FUMAR_TIRA + (Q_FUMAR.n - 1 - FUMAR_TIRA) * clamp((u + 1) / .85), CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
         C.fumaSopro.desenha(corFumaca());
       } else comAlfa(1 - k, () => this.codigo(u));
       if (k >= 1) {
@@ -810,8 +820,19 @@ export const PASSOS = [
   },
   // 12 -----------------------------------------------------------
   {
-    v: 'chapar', modo: 'toque', dur: .1, pre: .5, cam: 115, aoAcao: () => sfx.floresce(),
-    draw() {
+    v: 'chapar', modo: 'toque', cam: 115, aoAcao: () => sfx.floresce(),
+    get dur() { return chaparVideo() ? 5 : .1; },
+    get pre() { return chaparVideo() ? 1.6 : .5; },
+    // com o vídeo: o cinzeiro se dissolve no rosto; o toque solta a fumaça e ela fecha os olhos
+    draw(u = 0) {
+      if (chaparVideo()) {
+        const k = suave(faixa(u, -1, -.1));
+        if (k < 1) {
+          const f = Q_RELAXAR.video?.pronto ? 18 + 3 * Math.cos(G.t * .5) : 21;
+          if (Q_RELAXAR.pronto) desenhaQuadro(Q_RELAXAR, f, CLOSE.x, CLOSE.y, CLOSE.s * .85, 1 - k);
+        }
+        return desenhaQuadro(Q_CHAPAR, u < 0 ? 0 : clamp(u) * (Q_CHAPAR.n - 1), CLOSE.x, CLOSE.y, CLOSE.s, k);
+      }
       const cor = corFumaca();
       C.fumaSopro.desenha(cor);
       C.fumaBrasa.desenha(cor);
@@ -824,5 +845,10 @@ export const PASSOS = [
     },
   },
 ];
+
+// último quadro do chapar, desenhado por baixo do começo da fase colorida
+export function rostoFinal(a) {
+  if (chaparVideo()) desenhaQuadro(Q_CHAPAR, Q_CHAPAR.n - 1, CLOSE.x, CLOSE.y, CLOSE.s, a);
+}
 
 export { ANC_L, ANC_R, FORA_L, FORA_R, arco, desenhaChama };
