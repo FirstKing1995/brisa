@@ -14,6 +14,9 @@ const Q_PLANTA = comVideo(quadros('plantinha', 22), 'plantinha-video', 120);
 const Q_ACENDER = quadros('acender', 22);
 const Q_SEDA = comVideo(quadros('seda', 19), 'seda-video', 96);
 const Q_LAMBER = comVideo(quadros('lamber', 22), 'lamber-video', 120);
+// Lamber de frente (vídeo do Leonardo, 79 quadros): a língua corre pela seda, os lábios fecham e os dedos apertam.
+const Q_LAMBER_F = quadros('lamber-frente-video', 79, 10);
+const lamberFrente = () => !/[?&]semvideo/.test(location.search) && Q_LAMBER_F.pronto;
 const Q_FINALIZAR = comVideo(quadros('finalizar', 22), 'finalizar-video', 120);
 // Fumar feito de um vídeo do Leonardo, com a boca de frente: a mão chega (até o quadro 10), ela traga e a ponta
 // brilha (até o 40), a mão tira o baseado (40 a 49) e ela solta a fumaça (62 a 78). Os tragos usam 10 a 40;
@@ -521,6 +524,13 @@ export const PASSOS = [
     get dur() { return Q_LAMBER.video?.pronto ? 7 : 3.8; }, pre: 1.8, cam: 115, loop: 'lambe',
     draw(u) {
       if (!Q_BOLAR.pronto) return this.codigo(u);
+      if (lamberFrente()) {
+        // o bolar se dissolve na boca de frente
+        const k = suave(faixa(u, -1, -.3));
+        desenhaQuadro(Q_BOLAR, 24, 0, TUBO_Y + 40, 1.45, 1 - k);
+        desenhaQuadro(Q_LAMBER_F, u < 0 ? 0 : clamp(u) * (Q_LAMBER_F.n - 1), CLOSE.x, CLOSE.y, CLOSE.s, k);
+        return;
+      }
       if (closesProntos()) {
         // o bolar se dissolve no close dos lábios
         const k = suave(faixa(u, -1, -.3));
@@ -565,7 +575,8 @@ export const PASSOS = [
     draw(u) {
       if (!closesProntos()) return this.codigo(u);
       const k = suave(faixa(u, -1, -.3));
-      desenhaQuadro(Q_LAMBER, 21, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
+      if (lamberFrente()) desenhaQuadro(Q_LAMBER_F, Q_LAMBER_F.n - 1, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
+      else desenhaQuadro(Q_LAMBER, 21, CLOSE.x, CLOSE.y, CLOSE.s, 1 - k);
       desenhaQuadro(Q_FINALIZAR, u < 0 ? 0 : clamp(u / .9) * 21, CLOSE.x, CLOSE.y, CLOSE.s, k);
     },
     codigo(u) {
