@@ -1,205 +1,188 @@
-// A fase colorida: visões em camada própria, com rastro. As mãos flutuam por cima.
-import { G, linha, tf, lerp, clamp, suave, faixa, rad } from './motor.js';
-import { POSES, montar, mao } from './mao.js';
-import { folha, Fumaca } from './objetos.js';
-import { ANC_L, ANC_R } from './cenas.js';
+// A fase colorida: uma viagem feita com os próprios desenhos dos vídeos (o rosto do chapar,
+// a flor do começo e a fumaça do cinzeiro). Tudo é desenhado em branco numa camada à parte e
+// depois tingido por um arco-íris que gira devagar; a camada final guarda um rastro curto.
+import { lerp, clamp, suave } from './motor.js';
+import { quadros } from './objetos.js';
 import { toqueFlor } from './som.js';
 
 export const DURACAO = 48;
 
-const cor = (h, s = 88, l = 66, a = 1) => `hsla(${h % 360},${s}%,${l}%,${a})`;
+const Q_ROSTO = quadros('chapar-video', 61, 10);
+const Q_FLOR = quadros('final-flor', 1);
+const Q_FUMACA = quadros('final-fumaca', 1);
+const ROSTO = { x: 0, y: 115, s: 2.1 };
+
+const cor = (h, s = 88, l = 66, a = 1) => `hsla(${((h % 360) + 360) % 360},${s}%,${l}%,${a})`;
+
+// Desenha um quadro da grade centrado em (x, y), girado e escalado, somando luz.
+function sprite(c, q, f, x, y, s, r = 0, a = 1) {
+  if (!q.pronto || a <= .003 || s <= .001) return;
+  const linhas = Math.ceil(q.n / q.colunas);
+  const w = q.img.width / q.colunas, h = q.img.height / linhas;
+  f = Math.max(0, Math.min(q.n - 1, Math.round(f)));
+  c.save();
+  c.translate(x, y);
+  if (r) c.rotate(r);
+  c.globalAlpha = a;
+  c.drawImage(q.img, (f % q.colunas) * w, Math.floor(f / q.colunas) * h, w, h, -w * s / 2, -h * s / 2, w * s, h * s);
+  c.restore();
+}
+
+// fios de fumaça só dos lados, para não passarem por cima do rosto
+const foraDoRosto = lado => lado * (430 + Math.random() * 330);
 
 export class Chapado {
-  constructor() { this.tela = document.createElement('canvas'); this.ctx = this.tela.getContext('2d'); this.t = 0; }
+  constructor() {
+    this.tela = document.createElement('canvas'); this.ctx = this.tela.getContext('2d');
+    this.branco = document.createElement('canvas'); this.cb = this.branco.getContext('2d');
+    this.t = 0;
+  }
 
   iniciar(M, largura, altura) {
     this.M = M;
     this.t = 0;
     this.flores = [];
-    this.nuvem = new Fumaca();
-    this.fitas = [];
-    this.acum = 0;
     this.dim(largura, altura);
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.fillStyle = '#05030b';
     this.ctx.fillRect(0, 0, this.tela.width, this.tela.height);
-    const n = 6;
-    this.hastes = [];
-    for (let i = 0; i < n; i++) this.hastes.push({ x: lerp(-320, 320, (i + .5) / n) + (Math.random() - .5) * 40, h: 280 + Math.random() * 420, f: Math.random() * 6, m: 5 + (i % 4) });
-    if (M.visao === 'fumaca') {
-      for (let i = 0; i < 5; i++) {
-        this.fitas.push({ f: this.nuvem.nova(0, 0, { abre: 1.5, vida: 13 }), x: lerp(-280, 280, i / 4), h: M.pal[i % 4] });
-      }
-    }
+    // Fios de fumaça que sobem em volta do rosto (visão "fumaca") e lanternas de flor ("jardim").
+    this.fios = Array.from({ length: 8 }, (_, i) => ({ x: foraDoRosto(i % 2 ? 1 : -1), f: Math.random(), v: .045 + Math.random() * .03, e: .9 + Math.random() * .7, l: i % 2 ? 1 : -1 }));
+    this.lanternas = Array.from({ length: 14 }, (_, i) => ({ l: i % 2 ? 1 : -1, x: (i % 2 ? 1 : -1) * (400 + Math.random() * 420), f: Math.random(), v: .03 + Math.random() * .025, g: Math.random() * 6, e: .7 + Math.random() * .8 }));
   }
 
   dim(w, h) {
     const W = Math.round(w * .7), H = Math.round(h * .7);
-    if (this.tela.width !== W || this.tela.height !== H) { this.tela.width = W; this.tela.height = H; }
+    for (const c of [this.tela, this.branco]) if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
   }
 
   toque(x, y) {
-    this.flores.push({ x, y, v: 0, h: this.M.pal[Math.floor(Math.random() * 4)], m: 5 + Math.floor(Math.random() * 5), g: Math.random() * 6 });
-    if (this.flores.length > 24) this.flores.shift();
+    this.flores.push({ x, y, v: 0, g: (Math.random() - .5) * 1.2, giro: (Math.random() - .5) * .5, e: 1.6 + Math.random() * 1.4 });
+    if (this.flores.length > 18) this.flores.shift();
     toqueFlor();
   }
 
   atualiza(dt) {
     this.t += dt;
     for (const f of this.flores) f.v += dt;
-    this.flores = this.flores.filter(f => f.v < 6.5);
-    if (this.M.visao === 'fumaca') {
-      this.nuvem.atualiza(dt);
-      this.acum += dt;
-      if (this.acum > .06) {
-        this.acum = 0;
-        for (const f of this.fitas) this.nuvem.emite(f.f, f.x + Math.sin(this.t * .4 + f.h) * 30, 620);
-      }
-    }
+    this.flores = this.flores.filter(f => f.v < 7);
+    for (const f of this.fios) { f.f += dt * f.v; if (f.f > 1) { f.f -= 1; f.x = foraDoRosto(f.l); } }
+    for (const f of this.lanternas) { f.f += dt * f.v; if (f.f > 1) { f.f -= 1; f.x = f.l * (400 + Math.random() * 420); } }
   }
 
-  // Pinta a camada. T é a transformação do mundo em pixels desta camada.
+  // Pinta a camada. escala e camY são os da câmera do jogo.
   pinta(escala, camY) {
-    const c = this.ctx, w = this.tela.width, h = this.tela.height, t = this.t, pal = this.M.pal;
+    const c = this.ctx, b = this.cb, w = this.tela.width, h = this.tela.height, t = this.t, pal = this.M.pal;
     const s = escala * .7;
+    const abre = suave(t / 7);
+
+    // Rastro curto: a camada escurece um pouco a cada quadro.
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.globalAlpha = 1;
-    c.fillStyle = 'rgba(5,3,11,.11)';
+    c.globalCompositeOperation = 'source-over';
+    c.fillStyle = 'rgba(5,3,11,.16)';
     c.fillRect(0, 0, w, h);
 
-    // Manchas de cor que passeiam devagar
+    // Manchas de cor que passeiam devagar ao fundo
     c.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       const x = w * (.5 + .38 * Math.sin(t * .13 + i * 2.2)), y = h * (.5 + .36 * Math.cos(t * .1 + i * 1.4));
-      const r = Math.max(w, h) * (.42 + .1 * Math.sin(t * .2 + i));
+      const r = Math.max(w, h) * (.45 + .1 * Math.sin(t * .2 + i));
       const g = c.createRadialGradient(x, y, 0, x, y, r);
-      g.addColorStop(0, cor(pal[i] + t * 3, 90, 52, .05));
+      g.addColorStop(0, cor(pal[i] + t * 3, 90, 50, .045 * abre));
       g.addColorStop(1, cor(pal[i], 90, 40, 0));
       c.fillStyle = g;
       c.fillRect(0, 0, w, h);
     }
-    c.globalCompositeOperation = 'source-over';
-    c.setTransform(s, 0, 0, s, w / 2, h / 2 - camY * s);
 
-    const ctx0 = G.ctx, fundo0 = G.fundo, cor0 = G.cor, amp0 = G.amp, der0 = G.derrete, larg0 = G.larg;
-    G.ctx = c; G.fundo = false; G.amp = 1.4; G.derrete = 12 + 6 * Math.sin(t * .2); G.larg = 2.6;
-
-    const abre = suave(t / 6);
-    this[this.M.visao]?.(t, abre, pal);
-
-    // Flores de toque
+    // 1) Tudo em branco, na camada de apoio
+    b.setTransform(1, 0, 0, 1, 0, 0);
+    b.globalAlpha = 1;
+    b.globalCompositeOperation = 'source-over';
+    b.fillStyle = '#000';
+    b.fillRect(0, 0, w, h);
+    b.setTransform(s, 0, 0, s, w / 2, h / 2 - camY * s);
+    b.globalCompositeOperation = 'lighter';
+    this[this.M.visao]?.(b, t, abre);
+    this.rosto(b, t);
     for (const f of this.flores) {
-      const k = f.v / 6.5, r = 30 + suave(k * 2) * 130, a = Math.sin(Math.PI * clamp(k)) * .95;
-      for (let i = 0; i < f.m; i++) {
-        const ang = f.g + i / f.m * Math.PI * 2 + t * .08;
-        G.cor = cor(f.h + i * 12 + t * 5, 90, 72);
-        linha(tf(folha(r, r * .24, 4), f.x, f.y, ang), { fechar: true, w: 2.2, a });
-      }
+      const k = f.v / 7;
+      const a = Math.sin(Math.PI * clamp(k)) * .95;
+      sprite(b, Q_FLOR, 0, f.x, f.y - suave(k) * 60, f.e * (.25 + suave(clamp(k * 2.2)) * .9), f.g + f.giro * f.v, a);
     }
-    G.ctx = ctx0; G.fundo = fundo0; G.cor = cor0; G.amp = amp0; G.derrete = der0; G.larg = larg0;
+
+    // 2) Tinge o branco com um arco-íris que gira em volta do rosto
+    b.setTransform(1, 0, 0, 1, 0, 0);
+    b.globalAlpha = 1;
+    b.globalCompositeOperation = 'multiply';
+    const cx = w / 2, cy = h / 2 + (ROSTO.y - camY) * s;
+    let g;
+    if (b.createConicGradient) {
+      g = b.createConicGradient(t * .12, cx, cy);
+      for (let i = 0; i <= 6; i++) g.addColorStop(i / 6, cor(pal[i % 4] + t * 8, 100, 60));
+    } else {
+      g = b.createLinearGradient(0, 0, w, h);
+      for (let i = 0; i <= 3; i++) g.addColorStop(i / 3, cor(pal[i] + t * 8, 92, 64));
+    }
+    b.fillStyle = g;
+    b.fillRect(0, 0, w, h);
+
+    // 3) Junta na camada final pelo mais claro (somar acumularia o rastro até estourar no branco)
+    c.globalCompositeOperation = 'lighten';
+    c.drawImage(this.branco, 0, 0);
+    c.globalCompositeOperation = 'source-over';
   }
 
-  mandala(t, abre, pal) {
-    const aneis = [
-      { n: 9, r: 90, c: 150, v: .1 },
-      { n: 14, r: 215, c: 170, v: -.07 },
-      { n: 20, r: 350, c: 190, v: .05 },
-      { n: 7, r: 28, c: 90, v: -.14 },
-    ];
-    aneis.forEach((a, k) => {
-      const pulso = 1 + .12 * Math.sin(t * .5 + k);
-      G.cor = cor(pal[k] + t * 6, 90, 68);
-      const f = folha(a.c * pulso * abre, a.c * .2 * abre, 6);
-      for (let i = 0; i < a.n; i++) {
-        const an = i / a.n * Math.PI * 2 + t * a.v;
-        const r = a.r * abre * pulso;
-        linha(tf(f, Math.sin(an) * r * .4, 100 - Math.cos(an) * r * .4, an), { fechar: true });
+  // O rosto do fim do chapar fica no centro, respirando devagar.
+  rosto(b, t) {
+    const r = 1 + .025 * Math.sin(t * .6);
+    sprite(b, Q_ROSTO, Q_ROSTO.n - 1, ROSTO.x, ROSTO.y + Math.sin(t * .45) * 6, ROSTO.s * r, Math.sin(t * .23) * .03, 1);
+  }
+
+  // Anéis de flores girando em volta do rosto, como um caleidoscópio.
+  mandala(b, t, abre) {
+    const aneis = [{ n: 8, r: 470, e: 1.05, v: .07 }, { n: 13, r: 720, e: 1.35, v: -.045 }, { n: 19, r: 1000, e: 1.6, v: .03 }];
+    aneis.forEach((A, k) => {
+      const surge = suave(clamp((t - k * 1.6) / 5));
+      if (surge <= 0) return;
+      const pulso = 1 + .06 * Math.sin(t * .5 + k * 1.3);
+      for (let i = 0; i < A.n; i++) {
+        const an = i / A.n * Math.PI * 2 + t * A.v;
+        const r = A.r * pulso * lerp(.4, 1, surge);
+        sprite(b, Q_FLOR, 0, Math.sin(an) * r, ROSTO.y - Math.cos(an) * r, A.e * surge, an, .75 * surge);
       }
     });
   }
 
-  jardim(t, abre, pal) {
-    for (const [i, b] of this.hastes.entries()) {
-      const cresce = suave((t - i * .8) / 9);
-      if (cresce <= 0) continue;
-      const pts = [];
-      const topo = b.h * cresce;
-      for (let k = 0; k <= 22; k++) {
-        const q = k / 22;
-        pts.push([b.x + Math.sin(q * 5 + b.f + t * .3) * 34 * q, 760 - q * (topo + 500)]);
-      }
-      G.cor = cor(pal[i % 4] + t * 4, 80, 60);
-      linha(pts, { w: 2.6 });
-      for (let k = 6; k < 20; k += 5) {
-        const p = pts[k];
-        if (!p) continue;
-        linha(tf(folha(70 * cresce, 15 * cresce, 5), p[0], p[1], (k % 2 ? 1 : -1) * 1.1 + Math.sin(t * .4 + k) * .2), { fechar: true, w: 2 });
-      }
-      const ponta = pts[22];
-      G.cor = cor(pal[(i + 1) % 4] + t * 8, 92, 70);
-      for (let m = 0; m < b.m; m++) {
-        linha(tf(folha(72 * cresce, 17 * cresce, 4), ponta[0], ponta[1], m / b.m * 6.283 + t * .15), { fechar: true });
-      }
+  // Fios de fumaça subindo dos lados.
+  fumaca(b, t, abre) {
+    for (const f of this.fios) {
+      const a = Math.sin(Math.PI * f.f) * .9 * abre;
+      sprite(b, Q_FUMACA, 0, f.x + Math.sin(t * .5 + f.x) * 40, 760 - f.f * 1500, f.e * 2.2, Math.sin(t * .3 + f.x) * .12, a);
+      // o espelho do fio dá a cara de chama dupla
+      b.save(); b.translate(f.x + 60 * f.l, 0); b.scale(-1, 1); b.translate(-(f.x + 60 * f.l), 0);
+      sprite(b, Q_FUMACA, 0, f.x + 60 * f.l + Math.sin(t * .5 + f.x + 1) * 40, 820 - f.f * 1500, f.e * 1.6, Math.sin(t * .3 + f.x) * .12, a * .6);
+      b.restore();
     }
   }
 
-  ondas(t, abre, pal) {
-    const n = 24;
+  // Flores que sobem devagar como lanternas, abrindo enquanto sobem.
+  jardim(b, t, abre) {
+    for (const f of this.lanternas) {
+      const a = Math.sin(Math.PI * f.f) * .95 * abre;
+      const y = 820 - f.f * 1700;
+      sprite(b, Q_FLOR, 0, f.x + Math.sin(t * .4 + f.g) * 60, y, f.e * (.8 + f.f * 1.3), Math.sin(t * .35 + f.g) * .35, a);
+    }
+  }
+
+  // Ecos do rosto saindo do centro, um túnel de rostos.
+  ondas(b, t, abre) {
+    const n = 6;
     for (let i = 0; i < n; i++) {
-      const y = lerp(-600, 700, i / (n - 1));
-      const pts = [];
-      for (let k = 0; k <= 48; k++) {
-        const x = lerp(-960, 960, k / 48);
-        const dentro = Math.exp(-(x * x) / 95000);
-        const v = Math.sin(x * .012 + t * .7 + i * .42) * 30 + Math.sin(x * .031 - t * .5 + i * .2) * 15;
-        pts.push([x, y + v * (.35 + dentro * 1.7) * abre]);
-      }
-      G.cor = cor(pal[i % 4] + i * 7 + t * 9, 88, 62);
-      linha(pts, { w: 2.2 });
+      const fase = ((t * .09 + i / n) % 1);
+      const e = ROSTO.s * Math.pow(5, fase) * 1.05;
+      const a = Math.sin(Math.PI * fase) * .42 * abre;
+      sprite(b, Q_ROSTO, Q_ROSTO.n - 1, ROSTO.x, ROSTO.y + fase * 60, e, Math.sin(t * .2 + i) * .08 * fase, a);
     }
-  }
-
-  fumaca(t, abre, pal) {
-    this.nuvem.fitas.forEach((f, i) => {
-      f.cor = this.corRgb(pal[i % 4] + t * 6);
-    });
-    this.nuvem.desenha();
-    G.ctx.globalAlpha = 1;
-  }
-
-  corRgb(h) {
-    h = ((h % 360) + 360) % 360;
-    const s = .86, l = .66, a = s * Math.min(l, 1 - l);
-    const f = n => { const k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1))))); };
-    return `${f(0)},${f(8)},${f(4)}`;
-  }
-
-  // Mãos boiando, por cima de tudo. sai: 0 a 1 quando estão indo embora.
-  maos(t, sai, surge) {
-    const M = this.M, pal = M.pal;
-    const brilho = 62 + 8 * Math.sin(t * .4);
-    const hue = [pal[0] + t * 12, pal[1] + t * 12];
-    const a = POSES.aberta;
-    const onda = (b, fase) => {
-      const p = { fr: 't' };
-      for (const n of ['t', 'i', 'm', 'r', 'p']) {
-        const f = n.charCodeAt(0) * .3 + fase;
-        p[n] = [b[n][0] + Math.sin(t * .8 + f) * 5, b[n][1] + Math.sin(t * .7 + f) * 8 - 6, b[n][2] + Math.sin(t * .9 + f) * 9 - 6];
-      }
-      return p;
-    };
-    const dy = sai * 1400 + (1 - surge) * 0;
-    const R = montar({ x: 196 + Math.sin(t * .35) * 30, y: 330 + Math.sin(t * .5) * 34 + dy, s: 1, r: -8 + Math.sin(t * .3) * 9, flip: false, pose: onda(a, 1), anc: ANC_R, pulseira: M.pulseira, anel: M.anel, tatuagem: M.tatuagem });
-    const L = montar({ x: -196 - Math.sin(t * .35) * 30, y: 330 + Math.sin(t * .5 + 2) * 34 + dy, s: 1, r: 8 - Math.sin(t * .3 + 1) * 9, flip: true, pose: onda(a, 3), anc: ANC_L });
-    const k = clamp(t / 6);
-    G.fundo = `rgba(0,0,0,${lerp(1, .25, k)})`;
-    G.amp = lerp(1, 1.6, k);
-    G.derrete = lerp(0, 10, k);
-    G.cor = k < 1 ? mistura(hue[0], k) : cor(hue[0], 90, brilho);
-    mao(R);
-    G.cor = k < 1 ? mistura(hue[1], k) : cor(hue[1], 90, brilho);
-    mao(L);
   }
 }
-
-function mistura(h, k) { return `hsl(${h % 360},${90 * k}%,${lerp(96, 66, k)}%)`; }

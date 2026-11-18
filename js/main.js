@@ -264,8 +264,8 @@ function desenha() {
   ctx.drawImage(chapado.tela, 0, 0, W, H);
   ctx.restore();
   ctx.globalAlpha = 1;
-  camera();
-  chapado.maos(chapado.t, suave(fim * 1.2), 1);
+  // no fim a cor escoa e o rosto volta a ser só linha branca antes de recomeçar
+  if (fim > 0) { camera(); rostoFinal(Math.sin(Math.PI * fim) * .9); }
   G.cor = '#f4f4f0'; G.fundo = '#000'; G.amp = 1; G.derrete = 0;
 }
 
